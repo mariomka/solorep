@@ -4,7 +4,6 @@
 
 - `.github/workflows/deploy.yml`: push to main -> lint -> unit tests -> e2e -> Pages build -> GitHub Pages deploy (source "GitHub Actions").
 - The Pages build passes `--base=/<repo-name>/` through `bun run build --` so asset URLs work under the Pages subpath.
-- PWA via vite-plugin-pwa: autoUpdate registration, precache, and generated `site.webmanifest`. Favicons and install icons live in `public/`.
 
 ## Gotchas
 
@@ -12,4 +11,3 @@
 - Playwright browsers are cached at `~/.cache/ms-playwright` keyed by the bun.lock hash; the Linux install step needs `--with-deps`.
 - `server.allowedHosts` in `vite.config.ts` whitelists `.trycloudflare.com` / `.ngrok-free.app` -- dev-only phone testing through tunnels, keep it.
 - Phone-testing workflow: `bun run dev` + `cloudflared tunnel --url http://127.0.0.1:5173`. Use explicit `127.0.0.1`: `localhost` can resolve to IPv6 `::1` where another project's Vite may be listening.
-- Exercise GIFs are NOT in this repo (GymVisual copyright): they're hotlinked from the hasaneyldrm/exercises-dataset repo via jsDelivr, pinned to a commit. `src/lib/exercise-media.ts` resolves routine `datasetId` refs (see `SCHEMA.md`) using the generated `src/lib/exercise-media-map.json`, and `src/lib/exercise-instructions.ts` resolves Spanish instruction steps from the generated `src/lib/exercise-instructions-map.json` (lazy-loaded chunk); regenerate both with `bun scripts/generate-media-map.ts [commit]` to bump the pin.

@@ -5,6 +5,12 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
+const EXERCISE_GIF_URL_PATTERN =
+  /^https:\/\/cdn\.jsdelivr\.net\/gh\/hasaneyldrm\/exercises-dataset@[0-9a-f]{40}\/videos\/.+\.gif$/;
+const EXERCISE_GIF_CACHE_NAME = "solorep-exercise-gifs";
+const EXERCISE_GIF_CACHE_MAX_ENTRIES = 150;
+const ONE_YEAR_IN_SECONDS = 60 * 60 * 24 * 365;
+
 export default defineConfig({
   plugins: [
     react(),
@@ -12,6 +18,25 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       manifestFilename: "site.webmanifest",
+      workbox: {
+        runtimeCaching: [
+          {
+            urlPattern: EXERCISE_GIF_URL_PATTERN,
+            handler: "CacheFirst",
+            options: {
+              cacheName: EXERCISE_GIF_CACHE_NAME,
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+              expiration: {
+                maxEntries: EXERCISE_GIF_CACHE_MAX_ENTRIES,
+                maxAgeSeconds: ONE_YEAR_IN_SECONDS,
+                purgeOnQuotaError: true,
+              },
+            },
+          },
+        ],
+      },
       manifest: {
         name: "Solorep",
         short_name: "Solorep",

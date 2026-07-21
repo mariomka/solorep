@@ -31,4 +31,5 @@ Git hooks enforce gates: pre-commit runs Biome on staged files, pre-push runs te
 - `docs/data-layer.md` -- Dexie tables, import/delete semantics, liveQuery rules
 - `docs/ui.md` -- Component conventions, shadcn usage, error display
 - `docs/testing.md` -- fake-indexeddb resets, flake traps, e2e setup
+- `docs/pwa.md` -- Manifest, service worker, offline behavior, media caching
 - `docs/ci-deploy.md` -- Workflow step order, Pages base path, phone testing
