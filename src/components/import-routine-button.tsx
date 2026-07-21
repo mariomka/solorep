@@ -37,9 +37,12 @@ export function ImportRoutineButton() {
 
   return (
     <div className="flex flex-col gap-2">
-      <Button onClick={handleButtonClick}>Importar rutina</Button>
+      <Button data-test="import-routine-trigger" onClick={handleButtonClick}>
+        Importar rutina
+      </Button>
       <input
         ref={inputRef}
+        data-test="import-routine-input"
         type="file"
         accept=".json,application/json"
         className="sr-only"
@@ -48,6 +51,7 @@ export function ImportRoutineButton() {
       />
       {hasError && (
         <p
+          data-test="import-routine-error"
           role="alert"
           className="text-destructive text-sm whitespace-pre-line"
         >

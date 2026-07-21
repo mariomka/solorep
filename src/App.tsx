@@ -75,10 +75,16 @@ function App() {
   const [screen, setScreen] = useState<Screen>({ name: "list" });
 
   return (
-    <main className="mx-auto flex min-h-svh w-full max-w-md flex-col gap-6 p-4">
+    <main
+      data-test="app-shell"
+      className="mx-auto flex min-h-svh w-full max-w-md flex-col gap-6 p-4"
+    >
       {screen.name === "list" && (
         <>
-          <h1 className="font-heading text-4xl font-black tracking-[-1px] uppercase">
+          <h1
+            data-test="app-title"
+            className="font-heading text-4xl font-black tracking-[-1px] uppercase"
+          >
             Solorep
           </h1>
           <ResumeSessionPrompt

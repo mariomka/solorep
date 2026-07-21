@@ -79,13 +79,14 @@ function DurationCountdown({ seconds, onFinished }: DurationCountdownProps) {
   return (
     <div className="flex flex-col items-center gap-4 py-6">
       <p
+        data-test="duration-timer"
         role="timer"
         aria-live="polite"
         className="font-heading text-8xl font-bold tabular-nums"
       >
         {remainingSeconds}
       </p>
-      <Button variant="outline" onClick={onFinished}>
+      <Button data-test="duration-skip" variant="outline" onClick={onFinished}>
         Saltar
       </Button>
     </div>
@@ -235,8 +236,13 @@ export function SetScreen({
   return (
     <div className="flex flex-col gap-4">
       <header>
-        <h2 className="font-heading text-2xl font-semibold">{exerciseName}</h2>
-        <p className="text-muted-foreground">
+        <h2
+          data-test="set-exercise-name"
+          className="font-heading text-2xl font-semibold"
+        >
+          {exerciseName}
+        </h2>
+        <p data-test="set-progress" className="text-muted-foreground">
           Serie {setNumber} de {totalSets}
         </p>
       </header>
@@ -247,12 +253,20 @@ export function SetScreen({
           onValueChange={handleExerciseChange}
           disabled={isExerciseChangeDisabled}
         >
-          <SelectTrigger className="w-full" aria-label="Cambiar ejercicio">
+          <SelectTrigger
+            data-test="set-exercise-select"
+            className="w-full"
+            aria-label="Cambiar ejercicio"
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {selectableExerciseKeys.map((exerciseKey) => (
-              <SelectItem key={exerciseKey} value={exerciseKey}>
+              <SelectItem
+                key={exerciseKey}
+                data-test={`set-exercise-option-${exerciseKey}`}
+                value={exerciseKey}
+              >
                 {getExerciseName(exerciseCatalog, exerciseKey)}
               </SelectItem>
             ))}
@@ -262,6 +276,7 @@ export function SetScreen({
 
       {isGifVisible && (
         <img
+          data-test="set-exercise-gif"
           src={gifUrl}
           alt={`Demostración de ${exerciseName}`}
           className="w-full rounded-xl bg-muted"
@@ -288,6 +303,7 @@ export function SetScreen({
               Peso (kg)
             </label>
             <Input
+              data-test="set-weight-input"
               id="set-weight"
               inputMode="decimal"
               value={weightInput}
@@ -299,6 +315,7 @@ export function SetScreen({
               Repeticiones
             </label>
             <Input
+              data-test="set-reps-input"
               id="set-reps"
               inputMode="numeric"
               value={repsInput}
@@ -320,6 +337,7 @@ export function SetScreen({
             Duración (segundos)
           </label>
           <Input
+            data-test="set-duration-input"
             id="set-duration"
             inputMode="numeric"
             value={durationInput}
@@ -330,12 +348,17 @@ export function SetScreen({
 
       <div className="flex flex-col gap-2">
         {errorMessage !== undefined && (
-          <p role="alert" className="text-sm text-destructive">
+          <p
+            data-test="set-error"
+            role="alert"
+            className="text-sm text-destructive"
+          >
             {errorMessage}
           </p>
         )}
         <div className="flex gap-2">
           <Button
+            data-test="set-previous"
             variant="outline"
             onClick={onPrevious}
             disabled={isFirstStep || isSwapPending}
@@ -344,6 +367,7 @@ export function SetScreen({
           </Button>
           {isRepsSet ? (
             <Button
+              data-test="set-continue"
               className="flex-1"
               onClick={handleContinue}
               disabled={!canContinue}
@@ -353,6 +377,7 @@ export function SetScreen({
           ) : (
             !isCountdownRunning && (
               <Button
+                data-test="set-start"
                 className="flex-1"
                 onClick={() => setIsCountdownRunning(true)}
                 disabled={!canStartCountdown}
@@ -362,7 +387,12 @@ export function SetScreen({
             )
           )}
         </div>
-        <Button variant="ghost" onClick={onExit} disabled={isSwapPending}>
+        <Button
+          data-test="set-exit"
+          variant="ghost"
+          onClick={onExit}
+          disabled={isSwapPending}
+        >
           Salir
         </Button>
       </div>

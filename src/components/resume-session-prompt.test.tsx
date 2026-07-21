@@ -25,11 +25,11 @@ describe("ResumeSessionPrompt", () => {
     render(<ResumeSessionPrompt onResume={vi.fn()} />);
 
     expect(
-      await screen.findByText("Tienes un entrenamiento en curso"),
-    ).toBeInTheDocument();
+      await screen.findByTestId("resume-session-prompt"),
+    ).toHaveTextContent("Tienes un entrenamiento en curso");
     expect(
-      screen.getByText("Full Body — 3 días — Full Body B"),
-    ).toBeInTheDocument();
+      await screen.findByTestId("resume-session-details"),
+    ).toHaveTextContent("Full Body — 3 días — Full Body B");
   });
 
   it("calls onResume with the stored routineId and dayIndex", async () => {
@@ -39,7 +39,7 @@ describe("ResumeSessionPrompt", () => {
     const user = userEvent.setup();
     render(<ResumeSessionPrompt onResume={onResume} />);
 
-    await user.click(await screen.findByRole("button", { name: "Reanudar" }));
+    await user.click(await screen.findByTestId("resume-session-resume"));
 
     expect(onResume).toHaveBeenCalledExactlyOnceWith({
       routineId: routine.id,
@@ -53,11 +53,11 @@ describe("ResumeSessionPrompt", () => {
     const user = userEvent.setup();
     render(<ResumeSessionPrompt onResume={vi.fn()} />);
 
-    await user.click(await screen.findByRole("button", { name: "Descartar" }));
+    await user.click(await screen.findByTestId("resume-session-discard"));
 
     await waitFor(() => {
       expect(
-        screen.queryByText("Tienes un entrenamiento en curso"),
+        screen.queryByTestId("resume-session-prompt"),
       ).not.toBeInTheDocument();
     });
     const session = await db.activeSession.get("current");
@@ -74,7 +74,7 @@ describe("ResumeSessionPrompt", () => {
       expect(session).toBeUndefined();
     });
     expect(
-      screen.queryByText("Tienes un entrenamiento en curso"),
+      screen.queryByTestId("resume-session-prompt"),
     ).not.toBeInTheDocument();
   });
 
@@ -123,7 +123,7 @@ describe("ResumeSessionPrompt", () => {
       expect(session).toBeUndefined();
     });
     expect(
-      screen.queryByText("Tienes un entrenamiento en curso"),
+      screen.queryByTestId("resume-session-prompt"),
     ).not.toBeInTheDocument();
   });
 
@@ -141,7 +141,7 @@ describe("ResumeSessionPrompt", () => {
       expect(session).toBeUndefined();
     });
     expect(
-      screen.queryByText("Tienes un entrenamiento en curso"),
+      screen.queryByTestId("resume-session-prompt"),
     ).not.toBeInTheDocument();
   });
 });

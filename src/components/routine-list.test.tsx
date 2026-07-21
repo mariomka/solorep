@@ -17,16 +17,20 @@ describe("RoutineList", () => {
 
     render(<RoutineList onSelectRoutine={vi.fn()} />);
 
-    expect(await screen.findByText("Full Body — 3 días")).toBeInTheDocument();
-    expect(await screen.findByText("3 días")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("routine-name-fullbody-3d"),
+    ).toHaveTextContent("Full Body — 3 días");
+    expect(
+      await screen.findByTestId("routine-day-count-fullbody-3d"),
+    ).toHaveTextContent("3 días");
   });
 
   it("renders the empty state when there are no routines", async () => {
     render(<RoutineList onSelectRoutine={vi.fn()} />);
 
-    expect(
-      await screen.findByText("Importa una rutina para empezar."),
-    ).toBeInTheDocument();
+    expect(await screen.findByTestId("routine-list-empty")).toHaveTextContent(
+      "Importa una rutina para empezar.",
+    );
   });
 
   it("orders routines by import time with the oldest first", async () => {
@@ -39,9 +43,9 @@ describe("RoutineList", () => {
 
     render(<RoutineList onSelectRoutine={vi.fn()} />);
 
-    const titles = await screen.findAllByText(/Rutina (Nueva|Vieja)/);
-    const titleTexts = titles.map((title) => title.textContent);
-    expect(titleTexts).toEqual(["Rutina Vieja", "Rutina Nueva"]);
+    expect(await screen.findByTestId("routine-list")).toHaveTextContent(
+      /Rutina Vieja.*Rutina Nueva/,
+    );
   });
 
   it("calls onSelectRoutine with the routine id when tapping a card", async () => {
@@ -51,9 +55,7 @@ describe("RoutineList", () => {
     const user = userEvent.setup();
     render(<RoutineList onSelectRoutine={onSelectRoutine} />);
 
-    const card = await screen.findByRole("button", {
-      name: "Entrenar Full Body — 3 días",
-    });
+    const card = await screen.findByTestId("routine-card-fullbody-3d");
     await user.click(card);
 
     expect(onSelectRoutine).toHaveBeenCalledExactlyOnceWith(routine.id);
@@ -67,13 +69,15 @@ describe("RoutineList", () => {
     const user = userEvent.setup();
     render(<RoutineList onSelectRoutine={onSelectRoutine} />);
 
-    const deleteButton = await screen.findByRole("button", {
-      name: "Eliminar Full Body — 3 días",
-    });
+    const deleteButton = await screen.findByTestId(
+      "routine-delete-fullbody-3d",
+    );
     await user.click(deleteButton);
 
     await waitFor(() => {
-      expect(screen.queryByText("Full Body — 3 días")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("routine-card-fullbody-3d"),
+      ).not.toBeInTheDocument();
     });
     await waitFor(async () => {
       await expect(db.progress.count()).resolves.toBe(0);

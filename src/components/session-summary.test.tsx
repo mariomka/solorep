@@ -84,11 +84,15 @@ describe("SessionSummary", () => {
 
     render(<SessionSummary onFinished={vi.fn()} />);
 
-    expect(await screen.findByText("Resumen")).toBeInTheDocument();
-    expect(screen.getByText("2:05")).toBeInTheDocument();
-    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(await screen.findByTestId("session-summary")).toHaveTextContent(
+      "Resumen",
+    );
+    expect(screen.getByTestId("summary-duration")).toHaveTextContent("2:05");
+    expect(screen.getByTestId("summary-sets-completed")).toHaveTextContent("2");
     // 10×20 + 8×20
-    expect(screen.getByText("360 kg")).toBeInTheDocument();
+    expect(screen.getByTestId("summary-total-volume")).toHaveTextContent(
+      "360 kg",
+    );
   });
 
   it("rounds the displayed volume to one decimal with fractional weights", async () => {
@@ -130,7 +134,9 @@ describe("SessionSummary", () => {
 
     render(<SessionSummary onFinished={vi.fn()} />);
 
-    expect(await screen.findByText("20.3 kg")).toBeInTheDocument();
+    expect(await screen.findByTestId("summary-total-volume")).toHaveTextContent(
+      "20.3 kg",
+    );
   });
 
   it("formats durations of an hour or more as h:mm:ss", async () => {
@@ -138,7 +144,9 @@ describe("SessionSummary", () => {
 
     render(<SessionSummary onFinished={vi.fn()} />);
 
-    expect(await screen.findByText("1:02:05")).toBeInTheDocument();
+    expect(await screen.findByTestId("summary-duration")).toHaveTextContent(
+      "1:02:05",
+    );
   });
 
   it("finishes the session on Terminar, wrapping progress to the first day", async () => {
@@ -148,7 +156,7 @@ describe("SessionSummary", () => {
     const user = userEvent.setup();
     render(<SessionSummary onFinished={onFinished} />);
 
-    await user.click(await screen.findByRole("button", { name: "Terminar" }));
+    await user.click(await screen.findByTestId("summary-finish"));
 
     await waitFor(() => expect(onFinished).toHaveBeenCalledTimes(1));
 
@@ -181,7 +189,7 @@ describe("SessionSummary", () => {
     const user = userEvent.setup();
     render(<SessionSummary onFinished={onFinished} />);
 
-    await user.click(await screen.findByRole("button", { name: "Terminar" }));
+    await user.click(await screen.findByTestId("summary-finish"));
 
     await waitFor(() => expect(onFinished).toHaveBeenCalledTimes(1));
     const progress = await db.progress.get(routine.id);
@@ -202,9 +210,7 @@ describe("SessionSummary", () => {
     const user = userEvent.setup();
     render(<SessionSummary onFinished={onFinished} />);
 
-    const finishButton = await screen.findByRole("button", {
-      name: "Terminar",
-    });
+    const finishButton = await screen.findByTestId("summary-finish");
     await user.click(finishButton);
     expect(finishButton).toBeDisabled();
     await user.click(finishButton);
@@ -214,7 +220,7 @@ describe("SessionSummary", () => {
       rejectFinish(new Error("finish failed"));
     });
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
+    expect(await screen.findByTestId("summary-error")).toHaveTextContent(
       "No se pudo terminar el entrenamiento. Inténtalo de nuevo.",
     );
     expect(finishButton).toBeEnabled();
@@ -237,16 +243,16 @@ describe("SessionSummary", () => {
     const user = userEvent.setup();
     render(<SessionSummary onFinished={onFinished} />);
 
-    await user.click(await screen.findByRole("button", { name: "Terminar" }));
+    await user.click(await screen.findByTestId("summary-finish"));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
+    expect(await screen.findByTestId("summary-error")).toHaveTextContent(
       "No se pudo terminar el entrenamiento. Inténtalo de nuevo.",
     );
     await expect(db.activeSession.count()).resolves.toBe(1);
     await expect(db.sessions.count()).resolves.toBe(0);
     expect(onFinished).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole("button", { name: "Descartar" }));
+    await user.click(screen.getByTestId("summary-discard"));
 
     await waitFor(() => expect(onFinished).toHaveBeenCalledTimes(1));
     await expect(db.activeSession.count()).resolves.toBe(0);
@@ -254,9 +260,13 @@ describe("SessionSummary", () => {
 
   it("renders nothing and calls onFinished when there is no active session", async () => {
     const onFinished = vi.fn();
-    const { container } = render(<SessionSummary onFinished={onFinished} />);
+    render(
+      <div data-test="session-summary-host">
+        <SessionSummary onFinished={onFinished} />
+      </div>,
+    );
 
     await waitFor(() => expect(onFinished).toHaveBeenCalledTimes(1));
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.getByTestId("session-summary-host")).toBeEmptyDOMElement();
   });
 });

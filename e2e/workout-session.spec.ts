@@ -1,13 +1,18 @@
 import { expect, type Page, test } from "@playwright/test";
 
 const routineFile = "examples/mini-session.json";
+const routineId = "mini-session";
 const routineName = "Mini sesión";
 const resumePromptTitle = "Tienes un entrenamiento en curso";
+const dayAId = "day-a";
+const dayBId = "day-b";
 
 async function importRoutine(page: Page): Promise<void> {
   await page.goto("/");
-  await page.getByLabel("Importar rutina JSON").setInputFiles(routineFile);
-  await expect(page.getByText(routineName)).toBeVisible();
+  await page.getByTestId("import-routine-input").setInputFiles(routineFile);
+  const routineNameElement = page.getByTestId(`routine-name-${routineId}`);
+  await expect(routineNameElement).toBeVisible();
+  await expect(routineNameElement).toHaveText(routineName);
 }
 
 test("completes a full session and advances the day pointer", async ({
@@ -15,66 +20,74 @@ test("completes a full session and advances the day pointer", async ({
 }) => {
   await importRoutine(page);
 
-  await page.getByRole("button", { name: `Entrenar ${routineName}` }).click();
+  await page.getByTestId(`routine-card-${routineId}`).click();
 
-  const dayACard = page.getByRole("button", { name: /Día A/ });
-  const dayBCard = page.getByRole("button", { name: /Día B/ });
+  const dayACard = page.getByTestId(`day-card-${dayAId}`);
+  const dayBCard = page.getByTestId(`day-card-${dayBId}`);
   await expect(dayACard).toBeVisible();
   await expect(dayBCard).toBeVisible();
+  await expect(dayACard).toContainText("Día A");
+  await expect(dayBCard).toContainText("Día B");
   await expect(dayACard).toContainText("Siguiente");
   await expect(dayBCard).not.toContainText("Siguiente");
 
   await dayACard.click();
 
   // Bench press set 1 of 2, then a rest screen (skipped deterministically).
-  await expect(
-    page.getByRole("heading", { name: "Press banca" }),
-  ).toBeVisible();
-  await expect(page.getByText("Serie 1 de 2")).toBeVisible();
-  await page.getByRole("button", { name: "Continuar" }).click();
+  const exerciseName = page.getByTestId("set-exercise-name");
+  const setProgress = page.getByTestId("set-progress");
+  const continueButton = page.getByTestId("set-continue");
+  await expect(exerciseName).toBeVisible();
+  await expect(exerciseName).toHaveText("Press banca");
+  await expect(setProgress).toBeVisible();
+  await expect(setProgress).toHaveText("Serie 1 de 2");
+  await continueButton.click();
 
-  await expect(page.getByText("Descanso", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Saltar descanso" }).click();
+  const restScreen = page.getByTestId("rest-screen");
+  await expect(restScreen).toBeVisible();
+  await expect(restScreen).toContainText("Descanso");
+  await page.getByTestId("rest-skip").click();
 
   // Bench press set 2: last set of the item, so no rest afterwards.
-  await expect(page.getByText("Serie 2 de 2")).toBeVisible();
-  await page.getByRole("button", { name: "Continuar" }).click();
+  await expect(setProgress).toBeVisible();
+  await expect(setProgress).toHaveText("Serie 2 de 2");
+  await continueButton.click();
 
   // Superset members run back-to-back within the round.
-  await expect(
-    page.getByRole("heading", { name: "Curl de bíceps" }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Continuar" }).click();
+  await expect(exerciseName).toBeVisible();
+  await expect(exerciseName).toHaveText("Curl de bíceps");
+  await continueButton.click();
 
-  await expect(
-    page.getByRole("heading", { name: "Extensión de tríceps" }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Continuar" }).click();
+  await expect(exerciseName).toBeVisible();
+  await expect(exerciseName).toHaveText("Extensión de tríceps");
+  await continueButton.click();
 
   // Duration set: start the countdown, then skip it.
-  await expect(page.getByRole("heading", { name: "Plancha" })).toBeVisible();
-  await page.getByRole("button", { name: "Empezar" }).click();
-  await page.getByRole("button", { name: "Saltar", exact: true }).click();
+  await expect(exerciseName).toBeVisible();
+  await expect(exerciseName).toHaveText("Plancha");
+  await page.getByTestId("set-start").click();
+  await page.getByTestId("duration-skip").click();
 
   // Summary: 5 sets. lastUsed is only written at finishSession, so every
   // set prefills the routine's planned values in a first-ever session.
   // Volume = 10×20 + 8×22.5 + 12×10 + 12×20 = 740 kg — this pins the
   // planned-values-win-in-session behavior.
-  await expect(page.getByText("Series completadas")).toBeVisible();
-  await expect(page.getByText("5", { exact: true })).toBeVisible();
-  await expect(page.getByText("740 kg")).toBeVisible();
-  await page.getByRole("button", { name: "Terminar" }).click();
+  const sessionSummary = page.getByTestId("session-summary");
+  await expect(sessionSummary).toBeVisible();
+  await expect(sessionSummary).toContainText("Series completadas");
+  await expect(page.getByTestId("summary-sets-completed")).toHaveText("5");
+  await expect(page.getByTestId("summary-total-volume")).toHaveText("740 kg");
+  await page.getByTestId("summary-finish").click();
 
   // Wait for the list before reloading: racing the finishSession
   // transaction would reload mid-write.
-  await expect(
-    page.getByRole("button", { name: `Entrenar ${routineName}` }),
-  ).toBeVisible();
+  const routineCard = page.getByTestId(`routine-card-${routineId}`);
+  await expect(routineCard).toBeVisible();
   await page.reload();
 
   // Re-entering after a reload shows the pointer moved to day B, proving
   // the progress write went through real IndexedDB.
-  await page.getByRole("button", { name: `Entrenar ${routineName}` }).click();
+  await routineCard.click();
   await expect(dayBCard).toContainText("Siguiente");
   await expect(dayACard).not.toContainText("Siguiente");
 });
@@ -84,30 +97,38 @@ test("resumes an in-progress session after a reload and discards it", async ({
 }) => {
   await importRoutine(page);
 
-  await page.getByRole("button", { name: `Entrenar ${routineName}` }).click();
-  await page.getByRole("button", { name: /Día A/ }).click();
+  await page.getByTestId(`routine-card-${routineId}`).click();
+  await page.getByTestId(`day-card-${dayAId}`).click();
 
   // Complete only the first set; the rest screen appearing guarantees the
   // completion was persisted before the reload.
-  await expect(page.getByText("Serie 1 de 2")).toBeVisible();
-  await page.getByRole("button", { name: "Continuar" }).click();
-  await expect(page.getByText("Descanso", { exact: true })).toBeVisible();
+  const setProgress = page.getByTestId("set-progress");
+  await expect(setProgress).toBeVisible();
+  await expect(setProgress).toHaveText("Serie 1 de 2");
+  await page.getByTestId("set-continue").click();
+  const restScreen = page.getByTestId("rest-screen");
+  await expect(restScreen).toBeVisible();
+  await expect(restScreen).toContainText("Descanso");
 
   await page.reload();
 
-  await expect(page.getByText(resumePromptTitle)).toBeVisible();
-  await page.getByRole("button", { name: "Reanudar" }).click();
+  const resumePrompt = page.getByTestId("resume-session-prompt");
+  await expect(resumePrompt).toBeVisible();
+  await expect(resumePrompt).toContainText(resumePromptTitle);
+  await page.getByTestId("resume-session-resume").click();
 
   // Resumes on the next uncompleted step.
-  await expect(
-    page.getByRole("heading", { name: "Press banca" }),
-  ).toBeVisible();
-  await expect(page.getByText("Serie 2 de 2")).toBeVisible();
+  const exerciseName = page.getByTestId("set-exercise-name");
+  await expect(exerciseName).toBeVisible();
+  await expect(exerciseName).toHaveText("Press banca");
+  await expect(setProgress).toBeVisible();
+  await expect(setProgress).toHaveText("Serie 2 de 2");
 
-  await page.getByRole("button", { name: "Salir" }).click();
+  await page.getByTestId("set-exit").click();
 
-  await expect(page.getByText(resumePromptTitle)).toBeVisible();
-  await page.getByRole("button", { name: "Descartar" }).click();
+  await expect(resumePrompt).toBeVisible();
+  await expect(resumePrompt).toContainText(resumePromptTitle);
+  await page.getByTestId("resume-session-discard").click();
 
-  await expect(page.getByText(resumePromptTitle)).not.toBeVisible();
+  await expect(resumePrompt).not.toBeVisible();
 });

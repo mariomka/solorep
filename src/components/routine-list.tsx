@@ -33,15 +33,18 @@ export function RoutineList({ onSelectRoutine }: RoutineListProps) {
   const isEmpty = routines.length === 0;
   if (isEmpty) {
     return (
-      <p className="text-muted-foreground">Importa una rutina para empezar.</p>
+      <p data-test="routine-list-empty" className="text-muted-foreground">
+        Importa una rutina para empezar.
+      </p>
     );
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div data-test="routine-list" className="flex flex-col gap-3">
       {routines.map((record) => (
         <Card
           key={record.id}
+          data-test={`routine-card-${record.id}`}
           role="button"
           tabIndex={0}
           aria-label={`Entrenar ${record.routine.name}`}
@@ -59,12 +62,15 @@ export function RoutineList({ onSelectRoutine }: RoutineListProps) {
           }}
         >
           <CardHeader>
-            <CardTitle>{record.routine.name}</CardTitle>
-            <CardDescription>
+            <CardTitle data-test={`routine-name-${record.id}`}>
+              {record.routine.name}
+            </CardTitle>
+            <CardDescription data-test={`routine-day-count-${record.id}`}>
               {formatDayCount(record.routine.days.length)}
             </CardDescription>
             <CardAction>
               <Button
+                data-test={`routine-delete-${record.id}`}
                 variant="destructive"
                 size="icon-sm"
                 aria-label={`Eliminar ${record.routine.name}`}

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/lib/db";
@@ -27,10 +27,18 @@ describe("DaySelection", () => {
       />,
     );
 
-    expect(await screen.findByText("Full Body — 3 días")).toBeInTheDocument();
-    expect(await screen.findByText("Full Body A")).toBeInTheDocument();
-    expect(await screen.findByText("Full Body B")).toBeInTheDocument();
-    expect(await screen.findByText("Full Body C")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("day-selection-routine-name"),
+    ).toHaveTextContent("Full Body — 3 días");
+    expect(await screen.findByTestId("day-name-day-1")).toHaveTextContent(
+      "Full Body A",
+    );
+    expect(await screen.findByTestId("day-name-day-2")).toHaveTextContent(
+      "Full Body B",
+    );
+    expect(await screen.findByTestId("day-name-day-3")).toHaveTextContent(
+      "Full Body C",
+    );
   });
 
   it("shows the Siguiente badge only on the day from the progress row", async () => {
@@ -45,13 +53,15 @@ describe("DaySelection", () => {
       />,
     );
 
-    const badges = await screen.findAllByText("Siguiente");
-    expect(badges).toHaveLength(1);
-
-    const dayTwoCard = await screen.findByRole("button", {
-      name: /Full Body B/,
-    });
-    expect(within(dayTwoCard).getByText("Siguiente")).toBeInTheDocument();
+    expect(await screen.findByTestId("day-next-badge-day-2")).toHaveTextContent(
+      "Siguiente",
+    );
+    expect(
+      screen.queryByTestId("day-next-badge-day-1"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("day-next-badge-day-3"),
+    ).not.toBeInTheDocument();
   });
 
   it("defaults the Siguiente badge to the first day without a progress row", async () => {
@@ -65,10 +75,15 @@ describe("DaySelection", () => {
       />,
     );
 
-    const dayOneCard = await screen.findByRole("button", {
-      name: /Full Body A/,
-    });
-    expect(within(dayOneCard).getByText("Siguiente")).toBeInTheDocument();
+    expect(await screen.findByTestId("day-next-badge-day-1")).toHaveTextContent(
+      "Siguiente",
+    );
+    expect(
+      screen.queryByTestId("day-next-badge-day-2"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("day-next-badge-day-3"),
+    ).not.toBeInTheDocument();
   });
 
   it("starts a session and calls onStartDay when tapping a day", async () => {
@@ -84,9 +99,7 @@ describe("DaySelection", () => {
       />,
     );
 
-    const dayThreeCard = await screen.findByRole("button", {
-      name: /Full Body C/,
-    });
+    const dayThreeCard = await screen.findByTestId("day-card-day-3");
     await user.click(dayThreeCard);
 
     await waitFor(() => {
@@ -113,7 +126,7 @@ describe("DaySelection", () => {
       />,
     );
 
-    const backButton = await screen.findByRole("button", { name: "Volver" });
+    const backButton = await screen.findByTestId("day-selection-back");
     await user.click(backButton);
 
     expect(onBack).toHaveBeenCalledOnce();

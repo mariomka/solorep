@@ -49,34 +49,32 @@ describe("SetScreen", () => {
     const user = userEvent.setup();
     renderSetScreen(onComplete);
 
-    const repsInput = screen.getByLabelText("Repeticiones");
+    const repsInput = screen.getByTestId("set-reps-input");
     await waitFor(() => expect(repsInput).toHaveValue("10"));
 
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await user.click(screen.getByTestId("set-continue"));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
+    expect(await screen.findByTestId("set-error")).toHaveTextContent(
       "No se pudo guardar la serie.",
     );
-    const continueButton = screen.getByRole("button", { name: "Continuar" });
+    const continueButton = screen.getByTestId("set-continue");
     expect(continueButton).toBeEnabled();
 
     await user.click(continueButton);
 
     expect(onComplete).toHaveBeenCalledTimes(2);
     await waitFor(() => {
-      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("set-error")).not.toBeInTheDocument();
     });
   });
 
   it("hides the exercise GIF when it fails to load", async () => {
     renderSetScreen(vi.fn(async () => {}));
 
-    const gif = await screen.findByAltText("Demostración de Press banca");
+    const gif = await screen.findByTestId("set-exercise-gif");
 
     fireEvent.error(gif);
 
-    expect(
-      screen.queryByAltText("Demostración de Press banca"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId("set-exercise-gif")).not.toBeInTheDocument();
   });
 });

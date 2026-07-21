@@ -64,15 +64,16 @@ export function ResumeSessionPrompt({ onResume }: ResumeSessionPromptProps) {
   }
 
   return (
-    <Card>
+    <Card data-test="resume-session-prompt">
       <CardHeader>
         <CardTitle>Tienes un entrenamiento en curso</CardTitle>
-        <CardDescription>
+        <CardDescription data-test="resume-session-details">
           {record.routine.name} — {validDay.name}
         </CardDescription>
       </CardHeader>
       <CardFooter className="gap-2">
         <Button
+          data-test="resume-session-resume"
           className="flex-1"
           onClick={() => {
             onResume({
@@ -84,6 +85,7 @@ export function ResumeSessionPrompt({ onResume }: ResumeSessionPromptProps) {
           Reanudar
         </Button>
         <Button
+          data-test="resume-session-discard"
           variant="outline"
           onClick={() => {
             discardActiveSession().catch((error: unknown) => {

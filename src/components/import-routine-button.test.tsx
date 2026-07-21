@@ -20,23 +20,25 @@ describe("ImportRoutineButton", () => {
     const user = userEvent.setup();
     render(<ImportRoutineButton />);
 
-    const input = screen.getByLabelText("Importar rutina JSON");
+    const input = screen.getByTestId("import-routine-input");
     await user.upload(input, makeRoutineFile(fullbody3d));
 
     await waitFor(async () => {
       await expect(db.routines.count()).resolves.toBe(1);
     });
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("import-routine-error"),
+    ).not.toBeInTheDocument();
   });
 
   it("shows an error for a malformed file and leaves the database empty", async () => {
     const user = userEvent.setup();
     render(<ImportRoutineButton />);
 
-    const input = screen.getByLabelText("Importar rutina JSON");
+    const input = screen.getByTestId("import-routine-input");
     await user.upload(input, makeMalformedRoutineFile());
 
-    const alert = await screen.findByRole("alert");
+    const alert = await screen.findByTestId("import-routine-error");
     expect(alert).toHaveTextContent("El archivo no es JSON válido.");
     await expect(db.routines.count()).resolves.toBe(0);
   });
@@ -45,14 +47,16 @@ describe("ImportRoutineButton", () => {
     const user = userEvent.setup();
     render(<ImportRoutineButton />);
 
-    const input = screen.getByLabelText("Importar rutina JSON");
+    const input = screen.getByTestId("import-routine-input");
     await user.upload(input, makeMalformedRoutineFile());
-    await screen.findByRole("alert");
+    await screen.findByTestId("import-routine-error");
 
     await user.upload(input, makeRoutineFile(fullbody3d));
 
     await waitFor(() => {
-      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("import-routine-error"),
+      ).not.toBeInTheDocument();
     });
     await expect(db.routines.count()).resolves.toBe(1);
   });
@@ -65,12 +69,12 @@ describe("ImportRoutineButton", () => {
     const user = userEvent.setup();
     render(<ImportRoutineButton />);
 
-    const input = screen.getByLabelText("Importar rutina JSON");
+    const input = screen.getByTestId("import-routine-input");
     const file = makeRoutineFile(fullbody3d);
 
     await user.upload(input, file);
 
-    const alert = await screen.findByRole("alert");
+    const alert = await screen.findByTestId("import-routine-error");
     expect(alert).toHaveTextContent("No se pudo importar la rutina.");
     await expect(db.routines.count()).resolves.toBe(0);
 
@@ -79,14 +83,16 @@ describe("ImportRoutineButton", () => {
     await waitFor(async () => {
       await expect(db.routines.count()).resolves.toBe(1);
     });
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("import-routine-error"),
+    ).not.toBeInTheDocument();
   });
 
   it("imports the same file twice because the input value is reset", async () => {
     const user = userEvent.setup();
     render(<ImportRoutineButton />);
 
-    const input = screen.getByLabelText("Importar rutina JSON");
+    const input = screen.getByTestId("import-routine-input");
     const file = makeRoutineFile(fullbody3d);
 
     await user.upload(input, file);

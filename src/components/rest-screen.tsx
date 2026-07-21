@@ -11,16 +11,20 @@ export function RestScreen({ seconds, onFinished, onExit }: RestScreenProps) {
   const remainingSeconds = useCountdown(seconds, onFinished);
 
   return (
-    <div className="flex flex-col items-center gap-6 py-12">
+    <div
+      data-test="rest-screen"
+      className="flex flex-col items-center gap-6 py-12"
+    >
       <p className="text-lg text-muted-foreground">Descanso</p>
       <p
+        data-test="rest-timer"
         role="timer"
         aria-live="polite"
         className="font-heading text-8xl font-bold tabular-nums"
       >
         {remainingSeconds}
       </p>
-      <Button variant="outline" onClick={onFinished}>
+      <Button data-test="rest-skip" variant="outline" onClick={onFinished}>
         Saltar descanso
       </Button>
       <Button variant="ghost" onClick={onExit}>

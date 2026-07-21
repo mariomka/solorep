@@ -35,107 +35,114 @@ describe("App", () => {
   it("renders the app shell", async () => {
     render(<App />);
 
-    expect(
-      screen.getByRole("heading", { name: "Solorep" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Importar rutina" }),
-    ).toBeInTheDocument();
-    expect(
-      await screen.findByText("Importa una rutina para empezar."),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId("app-shell")).toBeInTheDocument();
+    expect(screen.getByTestId("app-title")).toHaveTextContent("Solorep");
+    expect(screen.getByTestId("import-routine-trigger")).toHaveTextContent(
+      "Importar rutina",
+    );
+    expect(await screen.findByTestId("routine-list-empty")).toHaveTextContent(
+      "Importa una rutina para empezar.",
+    );
   });
 
   it("imports a routine file and shows it in the list", async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    const input = screen.getByLabelText("Importar rutina JSON");
+    const input = screen.getByTestId("import-routine-input");
     await user.upload(input, makeRoutineFile(fullbody3d));
 
-    expect(await screen.findByText("Full Body — 3 días")).toBeInTheDocument();
-    expect(await screen.findByText("3 días")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("routine-name-fullbody-3d"),
+    ).toHaveTextContent("Full Body — 3 días");
+    expect(
+      await screen.findByTestId("routine-day-count-fullbody-3d"),
+    ).toHaveTextContent("3 días");
   });
 
   it("navigates to day selection when tapping a routine card", async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    const input = screen.getByLabelText("Importar rutina JSON");
+    const input = screen.getByTestId("import-routine-input");
     await user.upload(input, makeRoutineFile(fullbody3d));
 
-    const routineCard = await screen.findByRole("button", {
-      name: "Entrenar Full Body — 3 días",
-    });
+    const routineCard = await screen.findByTestId("routine-card-fullbody-3d");
     await user.click(routineCard);
 
-    expect(await screen.findByText("Full Body A")).toBeInTheDocument();
-    expect(await screen.findByText("Full Body B")).toBeInTheDocument();
-    expect(await screen.findByText("Full Body C")).toBeInTheDocument();
+    expect(await screen.findByTestId("day-name-day-1")).toHaveTextContent(
+      "Full Body A",
+    );
+    expect(await screen.findByTestId("day-name-day-2")).toHaveTextContent(
+      "Full Body B",
+    );
+    expect(await screen.findByTestId("day-name-day-3")).toHaveTextContent(
+      "Full Body C",
+    );
   });
 
   it("navigates to the workout screen when tapping a day", async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    const input = screen.getByLabelText("Importar rutina JSON");
+    const input = screen.getByTestId("import-routine-input");
     await user.upload(input, makeRoutineFile(fullbody3d));
 
-    const routineCard = await screen.findByRole("button", {
-      name: "Entrenar Full Body — 3 días",
-    });
+    const routineCard = await screen.findByTestId("routine-card-fullbody-3d");
     await user.click(routineCard);
 
-    const dayCard = await screen.findByRole("button", {
-      name: /Full Body A/,
-    });
+    const dayCard = await screen.findByTestId("day-card-day-1");
     await user.click(dayCard);
 
-    expect(
-      await screen.findByRole("heading", { name: "Sentadilla con barra" }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Serie 1 de 4")).toBeInTheDocument();
+    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
+      "Sentadilla con barra",
+    );
+    expect(screen.getByTestId("set-progress")).toHaveTextContent(
+      "Serie 1 de 4",
+    );
   });
 
   it("runs a full day: workout, summary, finish, and advanced progress", async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    const input = screen.getByLabelText("Importar rutina JSON");
+    const input = screen.getByTestId("import-routine-input");
     await user.upload(input, makeRoutineFile(miniRoutineData));
 
-    await user.click(
-      await screen.findByRole("button", { name: "Entrenar Mini" }),
-    );
-    await user.click(await screen.findByRole("button", { name: /Día 1/ }));
+    await user.click(await screen.findByTestId("routine-card-mini"));
+    await user.click(await screen.findByTestId("day-card-day-1"));
 
     // Set 1 of 2.
-    expect(await screen.findByText("Serie 1 de 2")).toBeInTheDocument();
-    const firstRepsInput = screen.getByLabelText("Repeticiones");
-    await waitFor(() => expect(firstRepsInput).toHaveValue("10"));
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-
-    await user.click(
-      await screen.findByRole("button", { name: "Saltar descanso" }),
+    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
+      "Serie 1 de 2",
     );
+    const firstRepsInput = screen.getByTestId("set-reps-input");
+    await waitFor(() => expect(firstRepsInput).toHaveValue("10"));
+    await user.click(screen.getByTestId("set-continue"));
+
+    await user.click(await screen.findByTestId("rest-skip"));
 
     // Set 2 of 2: prefills the routine's planned 8 -- lastUsed only lands at
     // finishSession, so a first-ever session sees planned values throughout.
-    expect(await screen.findByText("Serie 2 de 2")).toBeInTheDocument();
-    const secondRepsInput = screen.getByLabelText("Repeticiones");
+    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
+      "Serie 2 de 2",
+    );
+    const secondRepsInput = screen.getByTestId("set-reps-input");
     await waitFor(() => expect(secondRepsInput).toHaveValue("8"));
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await user.click(screen.getByTestId("set-continue"));
 
     // Summary screen.
-    expect(await screen.findByText("Resumen")).toBeInTheDocument();
-    expect(screen.getByText("Series completadas")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Terminar" }));
+    expect(await screen.findByTestId("session-summary")).toHaveTextContent(
+      "Resumen",
+    );
+    expect(screen.getByTestId("summary-sets-completed")).toHaveTextContent("2");
+    await user.click(screen.getByTestId("summary-finish"));
 
     // Back at the list, with progress advanced to day 2.
-    expect(
-      await screen.findByRole("heading", { name: "Solorep" }),
-    ).toBeInTheDocument();
-    expect(await screen.findByText("Mini")).toBeInTheDocument();
+    expect(await screen.findByTestId("app-title")).toHaveTextContent("Solorep");
+    expect(await screen.findByTestId("routine-name-mini")).toHaveTextContent(
+      "Mini",
+    );
     const progress = await db.progress.get("mini");
     expect(progress?.currentDayIndex).toBe(1);
   });
@@ -151,15 +158,17 @@ describe("App", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Reanudar" }));
-    expect(await screen.findByText("Serie 1 de 2")).toBeInTheDocument();
-    const firstRepsInput = screen.getByLabelText("Repeticiones");
-    await waitFor(() => expect(firstRepsInput).toHaveValue("10"));
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-    await user.click(
-      await screen.findByRole("button", { name: "Saltar descanso" }),
+    await user.click(await screen.findByTestId("resume-session-resume"));
+    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
+      "Serie 1 de 2",
     );
-    expect(await screen.findByText("Serie 2 de 2")).toBeInTheDocument();
+    const firstRepsInput = screen.getByTestId("set-reps-input");
+    await waitFor(() => expect(firstRepsInput).toHaveValue("10"));
+    await user.click(screen.getByTestId("set-continue"));
+    await user.click(await screen.findByTestId("rest-skip"));
+    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
+      "Serie 2 de 2",
+    );
 
     // Re-import overwrites the routine with a day-1 shrunk to a single set.
     const shrunkRoutine = parseRoutine({
@@ -181,9 +190,13 @@ describe("App", () => {
 
     // The workout keeps running against its snapshot: step 2 stays on screen
     // and completing it still reaches the summary.
-    expect(await screen.findByText("Serie 2 de 2")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-    expect(await screen.findByText("Resumen")).toBeInTheDocument();
+    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
+      "Serie 2 de 2",
+    );
+    await user.click(screen.getByTestId("set-continue"));
+    expect(await screen.findByTestId("session-summary")).toHaveTextContent(
+      "Resumen",
+    );
   });
 
   it("resumes a mid-session workout from the list prompt at the right step", async () => {
@@ -212,14 +225,16 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      await screen.findByText("Tienes un entrenamiento en curso"),
-    ).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Reanudar" }));
+      await screen.findByTestId("resume-session-prompt"),
+    ).toHaveTextContent("Tienes un entrenamiento en curso");
+    await user.click(screen.getByTestId("resume-session-resume"));
 
-    expect(
-      await screen.findByRole("heading", { name: "Flexiones" }),
-    ).toBeInTheDocument();
-    expect(await screen.findByText("Serie 2 de 2")).toBeInTheDocument();
+    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
+      "Flexiones",
+    );
+    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
+      "Serie 2 de 2",
+    );
   });
 
   it("resumes a completed active session directly at the summary", async () => {
@@ -257,9 +272,11 @@ describe("App", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Reanudar" }));
+    await user.click(await screen.findByTestId("resume-session-resume"));
 
-    expect(await screen.findByText("Resumen")).toBeInTheDocument();
-    expect(screen.queryByText("Serie 2 de 2")).not.toBeInTheDocument();
+    expect(await screen.findByTestId("session-summary")).toHaveTextContent(
+      "Resumen",
+    );
+    expect(screen.queryByTestId("set-progress")).not.toBeInTheDocument();
   });
 });

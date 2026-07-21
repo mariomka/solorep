@@ -83,13 +83,15 @@ describe("WorkoutScreen", () => {
 
     renderWorkout();
 
-    expect(
-      await screen.findByRole("heading", { name: "Sentadilla con barra" }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Serie 1 de 4")).toBeInTheDocument();
+    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
+      "Sentadilla con barra",
+    );
+    expect(screen.getByTestId("set-progress")).toHaveTextContent(
+      "Serie 1 de 4",
+    );
 
-    const repsInput = screen.getByLabelText("Repeticiones");
-    const weightInput = screen.getByLabelText("Peso (kg)");
+    const repsInput = screen.getByTestId("set-reps-input");
+    const weightInput = screen.getByTestId("set-weight-input");
     await waitFor(() => expect(repsInput).toHaveValue("12"));
     expect(weightInput).toHaveValue("55");
   });
@@ -99,12 +101,14 @@ describe("WorkoutScreen", () => {
     const user = userEvent.setup();
     renderWorkout();
 
-    const repsInput = await screen.findByLabelText("Repeticiones");
+    const repsInput = await screen.findByTestId("set-reps-input");
     await waitFor(() => expect(repsInput).toHaveValue("10"));
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await user.click(screen.getByTestId("set-continue"));
 
-    expect(await screen.findByText("Descanso")).toBeInTheDocument();
-    expect(screen.getByRole("timer")).toHaveTextContent("120");
+    expect(await screen.findByTestId("rest-screen")).toHaveTextContent(
+      "Descanso",
+    );
+    expect(screen.getByTestId("rest-timer")).toHaveTextContent("120");
 
     const session = await db.activeSession.get("current");
     expect(session?.completed[0]).toMatchObject({
@@ -115,8 +119,10 @@ describe("WorkoutScreen", () => {
       weight: 50,
     });
 
-    await user.click(screen.getByRole("button", { name: "Saltar descanso" }));
-    expect(await screen.findByText("Serie 2 de 4")).toBeInTheDocument();
+    await user.click(screen.getByTestId("rest-skip"));
+    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
+      "Serie 2 de 4",
+    );
   });
 
   it("alternates superset members without rest and rests after the round", async () => {
@@ -126,39 +132,41 @@ describe("WorkoutScreen", () => {
     const user = userEvent.setup();
     renderWorkout(1);
 
-    expect(
-      await screen.findByRole("heading", {
-        name: "Curl de bíceps con mancuernas",
-      }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Serie 1 de 3")).toBeInTheDocument();
-    const bicepsRepsInput = screen.getByLabelText("Repeticiones");
+    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
+      "Curl de bíceps con mancuernas",
+    );
+    expect(screen.getByTestId("set-progress")).toHaveTextContent(
+      "Serie 1 de 3",
+    );
+    const bicepsRepsInput = screen.getByTestId("set-reps-input");
     await waitFor(() => expect(bicepsRepsInput).toHaveValue("12"));
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await user.click(screen.getByTestId("set-continue"));
 
     // Member B follows directly, no rest screen in between.
-    expect(
-      await screen.findByRole("heading", {
-        name: "Extensión de tríceps en polea",
-      }),
-    ).toBeInTheDocument();
-    expect(screen.queryByText("Descanso")).not.toBeInTheDocument();
-    expect(screen.getByText("Serie 1 de 3")).toBeInTheDocument();
-    const tricepsRepsInput = screen.getByLabelText("Repeticiones");
+    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
+      "Extensión de tríceps en polea",
+    );
+    expect(screen.queryByTestId("rest-screen")).not.toBeInTheDocument();
+    expect(screen.getByTestId("set-progress")).toHaveTextContent(
+      "Serie 1 de 3",
+    );
+    const tricepsRepsInput = screen.getByTestId("set-reps-input");
     await waitFor(() => expect(tricepsRepsInput).toHaveValue("12"));
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await user.click(screen.getByTestId("set-continue"));
 
     // The round is over: now the superset rest applies.
-    expect(await screen.findByText("Descanso")).toBeInTheDocument();
-    expect(screen.getByRole("timer")).toHaveTextContent("75");
-    await user.click(screen.getByRole("button", { name: "Saltar descanso" }));
+    expect(await screen.findByTestId("rest-screen")).toHaveTextContent(
+      "Descanso",
+    );
+    expect(screen.getByTestId("rest-timer")).toHaveTextContent("75");
+    await user.click(screen.getByTestId("rest-skip"));
 
-    expect(
-      await screen.findByRole("heading", {
-        name: "Curl de bíceps con mancuernas",
-      }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Serie 2 de 3")).toBeInTheDocument();
+    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
+      "Curl de bíceps con mancuernas",
+    );
+    expect(screen.getByTestId("set-progress")).toHaveTextContent(
+      "Serie 2 de 3",
+    );
   });
 
   it("goes back with Anterior, prefills recorded values, and re-completing overwrites without rest", async () => {
@@ -166,28 +174,32 @@ describe("WorkoutScreen", () => {
     const user = userEvent.setup();
     renderWorkout();
 
-    const repsInput = await screen.findByLabelText("Repeticiones");
+    const repsInput = await screen.findByTestId("set-reps-input");
     await waitFor(() => expect(repsInput).toHaveValue("10"));
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-    await user.click(
-      await screen.findByRole("button", { name: "Saltar descanso" }),
+    await user.click(screen.getByTestId("set-continue"));
+    await user.click(await screen.findByTestId("rest-skip"));
+    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
+      "Serie 2 de 4",
     );
-    expect(await screen.findByText("Serie 2 de 4")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Anterior" }));
+    await user.click(screen.getByTestId("set-previous"));
 
-    expect(await screen.findByText("Serie 1 de 4")).toBeInTheDocument();
-    const weightInput = screen.getByLabelText("Peso (kg)");
+    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
+      "Serie 1 de 4",
+    );
+    const weightInput = screen.getByTestId("set-weight-input");
     await waitFor(() => expect(weightInput).toHaveValue("50"));
-    expect(screen.getByLabelText("Repeticiones")).toHaveValue("10");
+    expect(screen.getByTestId("set-reps-input")).toHaveValue("10");
 
     await user.clear(weightInput);
     await user.type(weightInput, "62.5");
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await user.click(screen.getByTestId("set-continue"));
 
     // A correction goes straight to the next set screen, no rest replay.
-    expect(await screen.findByText("Serie 2 de 4")).toBeInTheDocument();
-    expect(screen.queryByText("Descanso")).not.toBeInTheDocument();
+    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
+      "Serie 2 de 4",
+    );
+    expect(screen.queryByTestId("rest-screen")).not.toBeInTheDocument();
 
     const session = await db.activeSession.get("current");
     expect(session?.completed).toHaveLength(1);
@@ -206,23 +218,23 @@ describe("WorkoutScreen", () => {
     const user = userEvent.setup();
     renderWorkout();
 
-    expect(
-      await screen.findByRole("heading", { name: "Sentadilla con barra" }),
-    ).toBeInTheDocument();
-
-    await user.click(screen.getByRole("combobox"));
-    await user.click(
-      await screen.findByRole("option", { name: "Prensa de piernas" }),
+    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
+      "Sentadilla con barra",
     );
 
-    expect(
-      await screen.findByRole("heading", { name: "Prensa de piernas" }),
-    ).toBeInTheDocument();
-    const repsInput = screen.getByLabelText("Repeticiones");
-    await waitFor(() => expect(repsInput).toHaveValue("10"));
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await user.click(screen.getByTestId("set-exercise-select"));
+    await user.click(
+      await screen.findByTestId("set-exercise-option-leg-press"),
+    );
 
-    await screen.findByText("Descanso");
+    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
+      "Prensa de piernas",
+    );
+    const repsInput = screen.getByTestId("set-reps-input");
+    await waitFor(() => expect(repsInput).toHaveValue("10"));
+    await user.click(screen.getByTestId("set-continue"));
+
+    await screen.findByTestId("rest-screen");
 
     const session = await db.activeSession.get("current");
     expect(session?.swaps).toEqual({ "0:0": "leg-press" });
@@ -250,16 +262,18 @@ describe("WorkoutScreen", () => {
     const user = userEvent.setup();
     renderWorkout();
 
-    await screen.findByRole("heading", { name: "Sentadilla con barra" });
-    await user.click(screen.getByRole("combobox"));
+    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
+      "Sentadilla con barra",
+    );
+    await user.click(screen.getByTestId("set-exercise-select"));
     await user.click(
-      await screen.findByRole("option", { name: "Prensa de piernas" }),
+      await screen.findByTestId("set-exercise-option-leg-press"),
     );
 
-    expect(
-      screen.getByRole("heading", { name: "Sentadilla con barra" }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
+    expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+      "Sentadilla con barra",
+    );
+    expect(screen.getByTestId("set-continue")).toBeDisabled();
     await expect(db.activeSession.get("current")).resolves.toMatchObject({
       swaps: {},
       completed: [],
@@ -269,27 +283,27 @@ describe("WorkoutScreen", () => {
       rejectSwap(new Error("persist failed"));
     });
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
+    expect(await screen.findByTestId("set-error")).toHaveTextContent(
       "No se pudo cambiar el ejercicio.",
     );
-    expect(screen.getByRole("button", { name: "Continuar" })).toBeEnabled();
+    expect(screen.getByTestId("set-continue")).toBeEnabled();
 
-    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByTestId("set-exercise-select"));
     await user.click(
-      await screen.findByRole("option", { name: "Prensa de piernas" }),
+      await screen.findByTestId("set-exercise-option-leg-press"),
     );
 
-    expect(
-      await screen.findByRole("heading", { name: "Prensa de piernas" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
+      "Prensa de piernas",
+    );
     await expect(db.activeSession.get("current")).resolves.toMatchObject({
       swaps: { "0:0": "leg-press" },
       completed: [],
     });
     expect(recordSwap).toHaveBeenCalledTimes(2);
 
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-    await screen.findByText("Descanso");
+    await user.click(screen.getByTestId("set-continue"));
+    await screen.findByTestId("rest-screen");
     const session = await db.activeSession.get("current");
     expect(session?.completed[0].exerciseKey).toBe("leg-press");
   });
@@ -299,26 +313,24 @@ describe("WorkoutScreen", () => {
     const user = userEvent.setup();
     renderWorkout();
 
-    const firstWeightInput = await screen.findByLabelText("Peso (kg)");
+    const firstWeightInput = await screen.findByTestId("set-weight-input");
     await waitFor(() => expect(firstWeightInput).toHaveValue("50"));
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-    await user.click(
-      await screen.findByRole("button", { name: "Saltar descanso" }),
-    );
+    await user.click(screen.getByTestId("set-continue"));
+    await user.click(await screen.findByTestId("rest-skip"));
 
-    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByTestId("set-exercise-select"));
     await user.click(
-      await screen.findByRole("option", { name: "Prensa de piernas" }),
+      await screen.findByTestId("set-exercise-option-leg-press"),
     );
-    await user.click(screen.getByRole("button", { name: "Anterior" }));
+    await user.click(screen.getByTestId("set-previous"));
 
-    expect(
-      await screen.findByRole("heading", { name: "Prensa de piernas" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
+      "Prensa de piernas",
+    );
     await waitFor(() =>
-      expect(screen.getByLabelText("Peso (kg)")).toHaveValue("50"),
+      expect(screen.getByTestId("set-weight-input")).toHaveValue("50"),
     );
-    expect(screen.getByLabelText("Repeticiones")).toHaveValue("10");
+    expect(screen.getByTestId("set-reps-input")).toHaveValue("10");
   });
 
   it("auto-completes a duration set when the countdown reaches zero", async () => {
@@ -327,10 +339,10 @@ describe("WorkoutScreen", () => {
     await seedSession(0, 11);
     renderWorkout();
 
-    expect(
-      await screen.findByRole("heading", { name: "Plancha" }),
-    ).toBeInTheDocument();
-    const durationInput = screen.getByLabelText("Duración (segundos)");
+    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
+      "Plancha",
+    );
+    const durationInput = screen.getByTestId("set-duration-input");
     await waitFor(() => expect(durationInput).toHaveValue("45"));
 
     // setImmediate stays real so fake-indexeddb keeps working under fake timers.
@@ -346,16 +358,18 @@ describe("WorkoutScreen", () => {
     // fireEvent instead of userEvent: userEvent's internal waits hang under
     // vitest fake timers, and the countdown interval must be registered while
     // timers are faked for the advance below to reach it.
-    fireEvent.click(screen.getByRole("button", { name: "Empezar" }));
+    fireEvent.click(screen.getByTestId("set-start"));
 
-    expect(screen.getByRole("timer")).toHaveTextContent("45");
+    expect(screen.getByTestId("duration-timer")).toHaveTextContent("45");
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(46_000);
     });
     vi.useRealTimers();
 
-    expect(await screen.findByText("Descanso")).toBeInTheDocument();
+    expect(await screen.findByTestId("rest-screen")).toHaveTextContent(
+      "Descanso",
+    );
     const session = await db.activeSession.get("current");
     expect(session?.completed.at(-1)).toMatchObject({
       stepIndex: 11,
@@ -370,14 +384,16 @@ describe("WorkoutScreen", () => {
     const user = userEvent.setup();
     renderWorkout();
 
-    const durationInput = await screen.findByLabelText("Duración (segundos)");
+    const durationInput = await screen.findByTestId("set-duration-input");
     await waitFor(() => expect(durationInput).toHaveValue("45"));
     await user.clear(durationInput);
     await user.type(durationInput, "30");
-    await user.click(screen.getByRole("button", { name: "Empezar" }));
-    await user.click(await screen.findByRole("button", { name: "Saltar" }));
+    await user.click(screen.getByTestId("set-start"));
+    await user.click(await screen.findByTestId("duration-skip"));
 
-    expect(await screen.findByText("Descanso")).toBeInTheDocument();
+    expect(await screen.findByTestId("rest-screen")).toHaveTextContent(
+      "Descanso",
+    );
     const session = await db.activeSession.get("current");
     expect(session?.completed.at(-1)).toMatchObject({
       stepIndex: 11,
@@ -424,19 +440,17 @@ describe("WorkoutScreen", () => {
       />,
     );
 
-    const repsInput = await screen.findByLabelText("Repeticiones");
+    const repsInput = await screen.findByTestId("set-reps-input");
     await waitFor(() => expect(repsInput).toHaveValue("10"));
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-    await user.click(
-      await screen.findByRole("button", { name: "Saltar descanso" }),
-    );
+    await user.click(screen.getByTestId("set-continue"));
+    await user.click(await screen.findByTestId("rest-skip"));
 
     // The second set prefills the routine's planned 8: lastUsed is only
     // written at finishSession, so it cannot overlay within the session.
-    const secondRepsInput = await screen.findByLabelText("Repeticiones");
+    const secondRepsInput = await screen.findByTestId("set-reps-input");
     await waitFor(() => expect(secondRepsInput).toHaveValue("8"));
     expect(onDayCompleted).not.toHaveBeenCalled();
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await user.click(screen.getByTestId("set-continue"));
 
     await waitFor(() => expect(onDayCompleted).toHaveBeenCalledTimes(1));
 
@@ -456,18 +470,18 @@ describe("WorkoutScreen", () => {
     const user = userEvent.setup();
     renderWorkout();
 
-    const repsInput = await screen.findByLabelText("Repeticiones");
+    const repsInput = await screen.findByTestId("set-reps-input");
     await waitFor(() => expect(repsInput).toHaveValue("10"));
 
     vi.mocked(recordSetCompletion).mockRejectedValueOnce(
       new Error("persist failed"),
     );
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await user.click(screen.getByTestId("set-continue"));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
+    expect(await screen.findByTestId("set-error")).toHaveTextContent(
       "No se pudo guardar la serie.",
     );
-    const continueButton = screen.getByRole("button", { name: "Continuar" });
+    const continueButton = screen.getByTestId("set-continue");
     expect(continueButton).toBeEnabled();
     const session = await db.activeSession.get("current");
     expect(session?.completed).toHaveLength(0);
@@ -475,7 +489,9 @@ describe("WorkoutScreen", () => {
     // The retry goes through the real implementation and advances.
     await user.click(continueButton);
 
-    expect(await screen.findByText("Descanso")).toBeInTheDocument();
+    expect(await screen.findByTestId("rest-screen")).toHaveTextContent(
+      "Descanso",
+    );
     const sessionAfterRetry = await db.activeSession.get("current");
     expect(sessionAfterRetry?.completed).toHaveLength(1);
   });

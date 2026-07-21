@@ -134,37 +134,51 @@ export function SessionSummary({ onFinished }: SessionSummaryProps) {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div data-test="session-summary" className="flex flex-col gap-6">
       <h2 className="font-heading text-2xl font-bold">Resumen</h2>
       <Card>
         <CardContent className="flex flex-col gap-4">
           <div className="flex items-baseline justify-between">
             <span className="text-muted-foreground">Duración</span>
-            <span className="font-heading text-2xl font-bold tabular-nums">
+            <span
+              data-test="summary-duration"
+              className="font-heading text-2xl font-bold tabular-nums"
+            >
               {summary.durationText}
             </span>
           </div>
           <div className="flex items-baseline justify-between">
             <span className="text-muted-foreground">Series completadas</span>
-            <span className="font-heading text-2xl font-bold tabular-nums">
+            <span
+              data-test="summary-sets-completed"
+              className="font-heading text-2xl font-bold tabular-nums"
+            >
               {summary.setsCompleted}
             </span>
           </div>
           <div className="flex items-baseline justify-between">
             <span className="text-muted-foreground">Volumen total</span>
-            <span className="font-heading text-2xl font-bold tabular-nums">
+            <span
+              data-test="summary-total-volume"
+              className="font-heading text-2xl font-bold tabular-nums"
+            >
               {summary.totalVolume} kg
             </span>
           </div>
         </CardContent>
       </Card>
       {errorMessage !== undefined && (
-        <p role="alert" className="text-sm text-destructive">
+        <p
+          data-test="summary-error"
+          role="alert"
+          className="text-sm text-destructive"
+        >
           {errorMessage}
         </p>
       )}
       <div className="flex gap-2">
         <Button
+          data-test="summary-finish"
           className="flex-1"
           disabled={isFinishing}
           onClick={handleFinish}
@@ -173,6 +187,7 @@ export function SessionSummary({ onFinished }: SessionSummaryProps) {
         </Button>
         {errorMessage !== undefined && (
           <Button
+            data-test="summary-discard"
             variant="destructive"
             disabled={isFinishing}
             onClick={handleDiscard}

@@ -52,6 +52,7 @@ export function DaySelection({
   return (
     <div className="flex flex-col gap-4">
       <Button
+        data-test="day-selection-back"
         variant="ghost"
         className="self-start"
         aria-label="Volver"
@@ -60,13 +61,19 @@ export function DaySelection({
         <ArrowLeft />
         Volver
       </Button>
-      <h2 className="font-heading text-2xl font-bold">{record.routine.name}</h2>
+      <h2
+        data-test="day-selection-routine-name"
+        className="font-heading text-2xl font-bold"
+      >
+        {record.routine.name}
+      </h2>
       <div className="flex flex-col gap-3">
         {record.routine.days.map((day, dayIndex) => {
           const isNextDay = dayIndex === nextDayIndex;
           return (
             <button
               key={day.id}
+              data-test={`day-card-${day.id}`}
               type="button"
               className="rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
               onClick={() => {
@@ -81,13 +88,17 @@ export function DaySelection({
             >
               <Card className="cursor-pointer transition-colors hover:bg-muted/50">
                 <CardHeader>
-                  <CardTitle>{day.name}</CardTitle>
+                  <CardTitle data-test={`day-name-${day.id}`}>
+                    {day.name}
+                  </CardTitle>
                   <CardDescription>
                     {formatExerciseCount(day.exercises.length)}
                   </CardDescription>
                   {isNextDay && (
                     <CardAction>
-                      <Badge>Siguiente</Badge>
+                      <Badge data-test={`day-next-badge-${day.id}`}>
+                        Siguiente
+                      </Badge>
                     </CardAction>
                   )}
                 </CardHeader>
