@@ -9,7 +9,11 @@ function validRoutine(): RoutineInput {
     id: "fullbody-3d",
     name: "Full Body — 3 días",
     exercises: {
-      "bench-press": { name: "Press banca", datasetId: "0025" },
+      "bench-press": {
+        name: "Press banca",
+        datasetId: "0025",
+        note: "Mantén las escápulas retraídas durante toda la serie.",
+      },
       "dumbbell-press": { name: "Press mancuernas" },
       plank: { name: "Plancha" },
       "biceps-curl": { name: "Curl bíceps" },
@@ -68,6 +72,16 @@ describe("routineSchema", () => {
 
     expect(routine.id).toBe("fullbody-3d");
     expect(routine.days[0].exercises).toHaveLength(3);
+    expect(routine.exercises["bench-press"].note).toBe(
+      "Mantén las escápulas retraídas durante toda la serie.",
+    );
+  });
+
+  it("rejects exercise notes longer than 200 characters", () => {
+    const routine = validRoutine();
+    routine.exercises["bench-press"].note = "x".repeat(201);
+
+    expect(routineSchema.safeParse(routine).success).toBe(false);
   });
 
   it("rejects a set with both reps and duration", () => {

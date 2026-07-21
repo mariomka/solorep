@@ -7,7 +7,11 @@ import { clearDatabase } from "@/test/helpers";
 import { SetScreen } from "./set-screen";
 
 const exerciseCatalog: Routine["exercises"] = {
-  "bench-press": { name: "Press banca", datasetId: "0025" },
+  "bench-press": {
+    name: "Press banca",
+    datasetId: "0025",
+    note: "Mantén las escápulas retraídas durante toda la serie.",
+  },
 };
 
 const step: WorkoutStep = {
@@ -76,14 +80,18 @@ describe("SetScreen", () => {
     });
   });
 
-  it("hides the exercise GIF when it fails to load", async () => {
+  it("shows the exercise note and keeps it visible when the GIF fails", async () => {
     renderSetScreen(vi.fn(async () => {}));
 
     const gif = await screen.findByTestId("set-exercise-gif");
+    expect(screen.getByTestId("set-exercise-note")).toHaveTextContent(
+      "Mantén las escápulas retraídas durante toda la serie.",
+    );
 
     fireEvent.error(gif);
 
     expect(screen.queryByTestId("set-exercise-gif")).not.toBeInTheDocument();
+    expect(screen.getByTestId("set-exercise-note")).toBeInTheDocument();
   });
 
   it("replaces exercise content with a compact duration countdown", async () => {
@@ -103,6 +111,7 @@ describe("SetScreen", () => {
     expect(screen.getByTestId("duration-countdown-screen")).toBeInTheDocument();
     expect(screen.getByTestId("duration-timer")).toHaveTextContent("00:30");
     expect(screen.queryByTestId("set-exercise-gif")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("set-exercise-note")).not.toBeInTheDocument();
     expect(screen.queryByTestId("technique-trigger")).not.toBeInTheDocument();
     expect(screen.getByTestId("set-previous")).toBeInTheDocument();
     expect(screen.getByTestId("duration-skip")).toBeInTheDocument();

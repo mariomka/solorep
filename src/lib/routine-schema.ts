@@ -63,6 +63,7 @@ export const daySchema = z.strictObject({
 export const catalogEntrySchema = z.strictObject({
   name: z.string().min(1),
   datasetId: z.string().optional(),
+  note: z.string().min(1).max(200).optional(),
 });
 
 export const routineSchema = z

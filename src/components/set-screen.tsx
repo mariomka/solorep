@@ -203,9 +203,10 @@ export function SetScreen({
 
   const isRepsSet = "reps" in step.plannedSet;
   const exerciseName = getExerciseName(exerciseCatalog, effectiveExerciseKey);
-  const catalogEntry: { datasetId?: string } | undefined =
+  const catalogEntry: { datasetId?: string; note?: string } | undefined =
     exerciseCatalog[effectiveExerciseKey];
   const datasetId = catalogEntry?.datasetId;
+  const exerciseNote = catalogEntry?.note;
   const gifUrl =
     datasetId === undefined ? undefined : getExerciseGifUrl(datasetId);
   const instructions = useExerciseInstructions(datasetId);
@@ -495,15 +496,31 @@ export function SetScreen({
         </div>
       )}
 
-      {!isDurationCountdownVisible && isGifVisible && (
-        <img
-          data-test="set-exercise-gif"
-          src={gifUrl}
-          alt={`Demostración de ${exerciseName}`}
-          className="w-full object-contain"
-          onError={() => setHiddenGifUrl(gifUrl)}
-        />
-      )}
+      {!isDurationCountdownVisible &&
+        (isGifVisible || exerciseNote !== undefined) && (
+          <div className="flex flex-col">
+            {isGifVisible && (
+              <img
+                data-test="set-exercise-gif"
+                src={gifUrl}
+                alt={`Demostración de ${exerciseName}`}
+                className="w-full object-contain"
+                onError={() => setHiddenGifUrl(gifUrl)}
+              />
+            )}
+            {exerciseNote !== undefined && (
+              <p
+                data-test="set-exercise-note"
+                className={cn(
+                  "text-sm leading-relaxed text-muted-foreground",
+                  isGifVisible && "mt-3",
+                )}
+              >
+                {exerciseNote}
+              </p>
+            )}
+          </div>
+        )}
 
       {isDurationCountdownVisible && (
         <DurationCountdown

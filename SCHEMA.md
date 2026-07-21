@@ -13,7 +13,12 @@ The contract between routine-authoring agents and the app. Validated with Zod on
     // Catalog: every key used in days[] must exist here.
     // `datasetId` is the exercise id in https://github.com/hasaneyldrm/exercises-dataset
     // (e.g. "0025"); the app resolves the GIF and the localized instructions from it.
-    "bench-press": { "name": "Press banca", "datasetId": "0025" },
+    // `note` is optional, limited to 200 characters, and appears below the exercise media.
+    "bench-press": {
+      "name": "Press banca",
+      "datasetId": "0025",
+      "note": "Mantén las escápulas retraídas durante toda la serie."
+    },
     "dumbbell-press": { "name": "Press mancuernas" },
     "goblet-squat": { "name": "Goblet Squat" },
     "plank": { "name": "Plancha" }
@@ -75,6 +80,9 @@ The contract between routine-authoring agents and the app. Validated with Zod on
 
 - **Exercise key** (`bench-press`) is the global identity: last-used values and history
   are stored per key, shared across routines and days.
+- **Exercise note** (`note`) is optional catalog copy for a short execution cue or
+  routine-specific reminder. It is limited to 200 characters and appears below the
+  exercise GIF; it remains visible when no media is available.
 - **Set**: either `{ reps, weight? }` or `{ duration, weight? }` — never both `reps`
   and `duration`. `weight` optional (bodyweight). Always an array, one entry per set —
   explicit, supports pyramids, and verbosity is free when agents author the JSON.
