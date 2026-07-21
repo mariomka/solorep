@@ -44,8 +44,8 @@ Workout app for the gym. 100% frontend, static, deployable to GitHub Pages. No b
 
 Reality check: a web page **cannot reliably run JS while the screen is locked**. Native workout apps can because they run in the background. The web approach:
 
-- **Screen Wake Lock API**: keep the screen on while a workout session is active. This is what workout web apps actually do. Supported in Chrome for Android.
-- Beeps via **Web Audio** + **Vibration API** for the countdown. Short beeps mix with music playing from another app (Spotify etc.) — at most a brief audio duck, music keeps playing.
+- **Screen Wake Lock API**: keep the screen on while workout execution is active, release it outside the workout, and reacquire it when the page becomes visible again.
+- The final five seconds use short synthesized **Web Audio** cues plus optional **Vibration API** feedback; completion uses a distinct rising cue. On browsers with Audio Session support the cues request `transient` behavior. Interaction with music from another app is otherwise platform-specific and must be verified on a real phone.
 - If the user locks the phone anyway, the timer resyncs on unlock using timestamps (no drift, but no beep while locked).
 
 ## PWA
