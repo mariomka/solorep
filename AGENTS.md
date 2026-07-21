@@ -26,7 +26,6 @@ Git hooks enforce gates: pre-commit runs Biome on staged files, pre-push runs te
 
 **IMPORTANT: Read the relevant docs before working on the corresponding area.**
 
-- `IDEA.md` -- Product concept, decided behaviors, execution flow
 - `SCHEMA.md` -- Routine JSON contract and semantics
 - `docs/data-layer.md` -- Dexie tables, import/delete semantics, liveQuery rules
 - `docs/ui.md` -- Component conventions, shadcn usage, error display
