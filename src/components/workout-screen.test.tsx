@@ -17,17 +17,25 @@ import {
 } from "vitest";
 import { db } from "@/lib/db";
 import { parseRoutine } from "@/lib/routine-schema";
+import { workoutScreenWakeLock } from "@/lib/screen-wake-lock";
 import { buildDayPlan, swapKey } from "@/lib/session-plan";
 import {
   recordSetCompletion,
   recordSwap,
   startSession,
 } from "@/lib/session-store";
+import {
+  playTimerFeedback,
+  prepareTimerAudio,
+  stopTimerFeedback,
+} from "@/lib/timer-feedback";
 import { clearDatabase } from "@/test/helpers";
 import fullbody3d from "../../examples/fullbody-3d.json";
 import { WorkoutScreen } from "./workout-screen";
 
 vi.mock("@/lib/session-store", { spy: true });
+vi.mock("@/lib/screen-wake-lock", { spy: true });
+vi.mock("@/lib/timer-feedback", { spy: true });
 
 const routine = parseRoutine(fullbody3d);
 const groupedProgressRoutine = parseRoutine({
@@ -103,7 +111,7 @@ async function seedSession(
 function renderWorkout(dayIndex = 0) {
   const onDayCompleted = vi.fn();
   const onExit = vi.fn();
-  render(
+  const view = render(
     <WorkoutScreen
       routine={routine}
       dayIndex={dayIndex}
@@ -111,7 +119,7 @@ function renderWorkout(dayIndex = 0) {
       onExit={onExit}
     />,
   );
-  return { onDayCompleted, onExit };
+  return { onDayCompleted, onExit, ...view };
 }
 
 async function seedGroupedProgressSession(
@@ -165,6 +173,18 @@ function renderGroupedProgressWorkout() {
 }
 
 describe("WorkoutScreen", () => {
+  it("holds a screen wake lock only while the workout is mounted", async () => {
+    await seedSession(0);
+    const { unmount } = renderWorkout();
+
+    await screen.findByTestId("set-exercise-name");
+    expect(workoutScreenWakeLock.acquire).toHaveBeenCalledTimes(1);
+
+    unmount();
+
+    expect(workoutScreenWakeLock.release).toHaveBeenCalledTimes(1);
+  });
+
   it("renders the first step with last-used values over routine values", async () => {
     await seedSession(0);
     await db.lastUsed.put({
@@ -280,6 +300,8 @@ describe("WorkoutScreen", () => {
     const repsInput = await screen.findByTestId("set-reps-input");
     await waitFor(() => expect(repsInput).toHaveValue("10"));
     await user.click(screen.getByTestId("set-continue"));
+
+    expect(prepareTimerAudio).toHaveBeenCalledTimes(1);
 
     expect(await screen.findByTestId("rest-screen")).toHaveTextContent(
       "Descanso",
@@ -581,13 +603,28 @@ describe("WorkoutScreen", () => {
     // timers are faked for the advance below to reach it.
     fireEvent.click(screen.getByTestId("set-start"));
 
+    expect(prepareTimerAudio).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId("duration-timer")).toHaveTextContent("00:45");
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(46_000);
+      await vi.advanceTimersByTimeAsync(40_000);
+    });
+
+    expect(screen.getByTestId("duration-timer")).toHaveTextContent("5");
+    expect(playTimerFeedback).toHaveBeenLastCalledWith("countdown", {
+      soundEnabled: true,
+      vibrationEnabled: true,
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000);
     });
     vi.useRealTimers();
 
+    expect(playTimerFeedback).toHaveBeenLastCalledWith("complete", {
+      soundEnabled: true,
+      vibrationEnabled: true,
+    });
     expect(await screen.findByTestId("rest-screen")).toHaveTextContent(
       "Descanso",
     );
@@ -612,6 +649,11 @@ describe("WorkoutScreen", () => {
     await user.click(screen.getByTestId("set-start"));
     await user.click(await screen.findByTestId("duration-skip"));
 
+    expect(stopTimerFeedback).toHaveBeenCalled();
+    expect(playTimerFeedback).not.toHaveBeenCalledWith(
+      "complete",
+      expect.anything(),
+    );
     expect(await screen.findByTestId("rest-screen")).toHaveTextContent(
       "Descanso",
     );

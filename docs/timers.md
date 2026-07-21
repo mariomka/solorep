@@ -16,7 +16,7 @@ Timer completion must never depend on audio, vibration, or Wake Lock succeeding.
 | Seconds 5 through 1 | 880 Hz triangle wave, 75 ms | 35 ms |
 | Completion | 880 Hz for 100 ms, then 1320 Hz for 160 ms | 80 ms, 50 ms pause, 140 ms |
 
-Tones use a 5 ms attack and exponential decay to avoid speaker clicks. They are synthesized at runtime: no audio asset, fetch, decode, or offline cache is required.
+Tones use a 0.25 peak gain, 5 ms attack, and exponential decay to stay audible without speaker clicks. They are synthesized at runtime: no audio asset, fetch, decode, or offline cache is required.
 
 The default preference enables both sound and vibration, but consumers receive independent `soundEnabled` and `vibrationEnabled` flags. Do not collapse them into one setting.
 
@@ -24,10 +24,10 @@ The default preference enables both sound and vibration, but consumers receive i
 
 The UI integration is intentionally thin:
 
-1. Call `prepareTimerAudio()` from a trusted user gesture when entering or resuming a workout and when starting a duration timer. Browsers may keep a new `AudioContext` suspended without prior interaction.
-2. Create one `CountdownFeedbackController` per visible countdown.
-3. Pass each changed `remainingSeconds` value to `controller.update()`, including `0` before navigating away. Repeated values are ignored.
-4. Call `controller.reset()` when skipping, replacing, or unmounting a countdown so scheduled feedback and vibration stop.
+1. Call `prepareTimerAudio()` from the trusted user gesture that can start each countdown: `Continuar` before a possible rest and `Empezar` for a duration set. Browsers may keep a new `AudioContext` suspended without prior interaction.
+2. Use one `useCountdownFeedback()` instance per visible countdown. It owns a `CountdownFeedbackController` and its cleanup.
+3. Pass each changed positive `remainingSeconds` value to `notifySecond()` and call `notifyComplete()` at `0` before navigating away. Repeated values are ignored.
+4. Call `cancel()` when the user skips or exits. Natural completion deliberately leaves its short final cue alive across navigation.
 5. Call `workoutScreenWakeLock.acquire()` while the workout execution route is active. Call `release()` before summary, exit, or discard.
 
 Keep `useCountdown` free of sound and platform APIs. Timing is required behavior; feedback is optional behavior.

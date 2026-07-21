@@ -26,7 +26,9 @@ import {
   resolvePrefill,
   type WorkoutStep,
 } from "@/lib/session-plan";
+import { prepareTimerAudio } from "@/lib/timer-feedback";
 import { useCountdown } from "@/lib/use-countdown";
+import { useCountdownFeedback } from "@/lib/use-countdown-feedback";
 import { cn } from "@/lib/utils";
 
 export type CompletedSetEntry = ActiveSessionRecord["completed"][number];
@@ -93,8 +95,25 @@ interface DurationCountdownProps {
 }
 
 function DurationCountdown({ seconds, onFinished }: DurationCountdownProps) {
-  const remainingSeconds = useCountdown(seconds, onFinished);
-  const countdownText = formatCountdown(remainingSeconds);
+  const { notifySecond, notifyComplete, cancel } = useCountdownFeedback();
+  const handleTimerFinished = () => {
+    notifyComplete();
+    onFinished();
+  };
+  const remainingSeconds = useCountdown(seconds, handleTimerFinished);
+  useEffect(() => {
+    notifySecond(remainingSeconds);
+  }, [notifySecond, remainingSeconds]);
+
+  const isFinalCountdown = remainingSeconds >= 1 && remainingSeconds <= 5;
+  const countdownText = isFinalCountdown
+    ? String(remainingSeconds)
+    : formatCountdown(remainingSeconds);
+
+  const handleSkip = () => {
+    cancel();
+    onFinished();
+  };
 
   return (
     <div className="flex flex-col items-center border-y py-8">
@@ -105,14 +124,20 @@ function DurationCountdown({ seconds, onFinished }: DurationCountdownProps) {
         data-test="duration-timer"
         role="timer"
         aria-live="polite"
-        className="font-mono text-8xl font-medium tracking-tighter text-primary tabular-nums"
+        className={cn(
+          "font-mono text-8xl font-medium tracking-tighter text-primary tabular-nums",
+          isFinalCountdown &&
+            "font-heading text-[9rem] font-black leading-none tracking-tighter",
+        )}
       >
         {countdownText}
       </p>
-      <p className="mt-1 mb-6 text-[0.625rem] font-semibold tracking-widest text-muted-foreground uppercase">
-        Min : Seg
-      </p>
-      <Button data-test="duration-skip" variant="outline" onClick={onFinished}>
+      {!isFinalCountdown && (
+        <p className="mt-1 mb-6 text-[0.625rem] font-semibold tracking-widest text-muted-foreground uppercase">
+          Min : Seg
+        </p>
+      )}
+      <Button data-test="duration-skip" variant="outline" onClick={handleSkip}>
         Saltar
       </Button>
     </div>
@@ -225,6 +250,9 @@ export function SetScreen({
     if (parsedReps === undefined || !weightParse.isValid) {
       return;
     }
+    prepareTimerAudio().catch((error: unknown) => {
+      console.error("Failed to prepare timer audio", error);
+    });
     const values: LoggedSetValues =
       weightParse.weight === undefined
         ? { reps: parsedReps }
@@ -237,6 +265,13 @@ export function SetScreen({
       return;
     }
     submitCompletion({ duration: parsedDuration });
+  };
+
+  const handleStartCountdown = () => {
+    prepareTimerAudio().catch((error: unknown) => {
+      console.error("Failed to prepare timer audio", error);
+    });
+    setIsCountdownRunning(true);
   };
 
   const handleExerciseChange = (selectedKey: string) => {
@@ -532,7 +567,7 @@ export function SetScreen({
                 <Button
                   data-test="set-start"
                   className="flex-1"
-                  onClick={() => setIsCountdownRunning(true)}
+                  onClick={handleStartCountdown}
                   disabled={!canStartCountdown}
                 >
                   Empezar

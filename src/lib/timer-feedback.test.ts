@@ -104,7 +104,7 @@ describe("timer feedback", () => {
     expect(gain.gain.setValueAtTime).toHaveBeenCalledWith(0.0001, 10);
     expect(gain.gain.exponentialRampToValueAtTime).toHaveBeenNthCalledWith(
       1,
-      0.1,
+      0.25,
       10.005,
     );
     expect(vibrate).toHaveBeenCalledExactlyOnceWith(35);

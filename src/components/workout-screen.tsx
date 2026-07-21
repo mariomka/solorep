@@ -13,6 +13,7 @@ import {
 } from "@/components/set-screen";
 import type { ActiveSessionRecord } from "@/lib/db";
 import type { Routine } from "@/lib/routine-schema";
+import { workoutScreenWakeLock } from "@/lib/screen-wake-lock";
 import {
   buildDayPlan,
   type LoggedSetValues,
@@ -140,6 +141,17 @@ function WorkoutSessionView({
     initialSession,
     initWorkoutState,
   );
+
+  useEffect(() => {
+    workoutScreenWakeLock.acquire().catch((error: unknown) => {
+      console.error("Failed to acquire the workout screen wake lock", error);
+    });
+    return () => {
+      workoutScreenWakeLock.release().catch((error: unknown) => {
+        console.error("Failed to release the workout screen wake lock", error);
+      });
+    };
+  }, []);
 
   const step: WorkoutStep | undefined = plan[state.stepIndex];
   const isSessionComplete = initialSession.currentStepIndex === plan.length;
