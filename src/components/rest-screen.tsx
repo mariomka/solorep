@@ -8,10 +8,9 @@ import { cn } from "@/lib/utils";
 export interface RestScreenProps {
   seconds: number;
   onFinished: () => void;
-  onExit: () => void; // "Salir" -- session row stays for resume
 }
 
-export function RestScreen({ seconds, onFinished, onExit }: RestScreenProps) {
+export function RestScreen({ seconds, onFinished }: RestScreenProps) {
   const { notifySecond, notifyComplete, cancel } = useCountdownFeedback();
   const handleTimerFinished = () => {
     notifyComplete();
@@ -30,11 +29,6 @@ export function RestScreen({ seconds, onFinished, onExit }: RestScreenProps) {
   const handleSkip = () => {
     cancel();
     onFinished();
-  };
-
-  const handleExit = () => {
-    cancel();
-    onExit();
   };
 
   return (
@@ -64,12 +58,9 @@ export function RestScreen({ seconds, onFinished, onExit }: RestScreenProps) {
           </p>
         )}
       </div>
-      <div className="mt-8 flex flex-col gap-2">
+      <div className="mt-8 flex flex-col">
         <Button data-test="rest-skip" variant="outline" onClick={handleSkip}>
           Saltar descanso
-        </Button>
-        <Button variant="ghost" onClick={handleExit}>
-          Salir
         </Button>
       </div>
     </div>

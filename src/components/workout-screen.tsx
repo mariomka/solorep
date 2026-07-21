@@ -255,7 +255,6 @@ function WorkoutSessionView({
       <RestScreen
         seconds={state.restSeconds}
         onFinished={() => dispatch({ type: "restFinished" })}
-        onExit={onExit}
       />
     );
   }

@@ -17,7 +17,7 @@ afterEach(() => {
 describe("RestScreen", () => {
   it("shows the final five seconds as single digits and emits countdown feedback", async () => {
     const onFinished = vi.fn();
-    render(<RestScreen seconds={6} onFinished={onFinished} onExit={vi.fn()} />);
+    render(<RestScreen seconds={6} onFinished={onFinished} />);
 
     expect(screen.getByTestId("rest-timer")).toHaveTextContent("00:06");
 
@@ -54,9 +54,7 @@ describe("RestScreen", () => {
 
   it("cancels feedback without a completion cue when skipped", () => {
     const onFinished = vi.fn();
-    render(
-      <RestScreen seconds={30} onFinished={onFinished} onExit={vi.fn()} />,
-    );
+    render(<RestScreen seconds={30} onFinished={onFinished} />);
 
     fireEvent.click(screen.getByTestId("rest-skip"));
 
