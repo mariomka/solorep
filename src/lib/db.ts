@@ -34,11 +34,34 @@ export interface SessionRecord {
   }>;
 }
 
+export interface ActiveSessionRecord {
+  id: string; // always "current" -- singleton, one active session app-wide
+  routineId: string;
+  dayId: string;
+  dayIndex: number;
+  startedAt: number;
+  currentStepIndex: number;
+  swaps: Record<string, string>; // "itemIndex:memberIndex" -> alternative exercise key
+  completed: Array<{
+    stepIndex: number;
+    slotKey: string; // stable planned occurrence: "itemIndex:memberIndex"
+    primaryExerciseKey: string;
+    exerciseKey: string; // effective key when the set was completed
+    setIndex: number;
+    reps?: number;
+    duration?: number;
+    weight?: number;
+    completedAt: number;
+  }>;
+  updatedAt: number;
+}
+
 export const db = new Dexie("solorep") as Dexie & {
   routines: EntityTable<RoutineRecord, "id">;
   progress: EntityTable<ProgressRecord, "routineId">;
   lastUsed: EntityTable<LastUsedRecord, "exerciseKey">;
   sessions: EntityTable<SessionRecord, "id">;
+  activeSession: EntityTable<ActiveSessionRecord, "id">;
 };
 
 db.version(1).stores({
@@ -46,4 +69,5 @@ db.version(1).stores({
   progress: "routineId",
   lastUsed: "exerciseKey",
   sessions: "++id, routineId, finishedAt",
+  activeSession: "id",
 });

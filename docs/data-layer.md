@@ -2,10 +2,11 @@
 
 ## How It Works
 
-- `src/lib/db.ts` -- Dexie subclass + record interfaces, no business logic. `src/lib/routine-store.ts` -- all mutations, one transaction per operation.
-- Tables: `routines` (pk `id`, index `importedAt`), `progress` (pk `routineId`), `lastUsed` (pk `exerciseKey`), `sessions` (`++id`, indexes `routineId`, `finishedAt`).
+- `src/lib/db.ts` -- Dexie subclass + record interfaces, no business logic. `src/lib/routine-store.ts` (import/delete) and `src/lib/session-store.ts` (active session lifecycle) -- all mutations, one transaction per operation.
+- Tables: `routines` (pk `id`, index `importedAt`), `progress` (pk `routineId`), `lastUsed` (pk `exerciseKey`), `sessions` (`++id`, indexes `routineId`, `finishedAt`), `activeSession` (pk `id`).
+- `activeSession` is a singleton: its only row always has id `"current"` -- one active session app-wide. `startSession` overwrites it, `finishSession` archives it into `sessions` (dropping execution-only identity fields), advances `progress` with wraparound, and deletes it.
 - `lastUsed` and `sessions` are keyed by exercise key and GLOBAL across routines -- they intentionally survive routine deletion.
-- `lastUsed.sets` is an array indexed by set number; the future workout screen overlays these over routine-suggested values, extra sets fall back to the last known value.
+- `lastUsed.sets` is an array indexed by set number; the set screen overlays these over routine-suggested values (`resolvePrefill` in `src/lib/session-plan.ts`), extra sets fall back to the last known value.
 - Validation (Zod `routineSchema` in `src/lib/routine-schema.ts`) happens before any DB write; error paths must leave the DB untouched.
 
 ## Key Conventions (user-decided, do not relitigate)
@@ -19,4 +20,7 @@
 - Dexie schema v1 becomes a contract the moment real users have data: any shape change then requires a new `version(n)` with an upgrade function. Pre-release, editing v1 in place is fine.
 - `useLiveQuery` returns `undefined` on first render -- components must branch `undefined` (loading) vs `[]` (empty) explicitly.
 - Dexie liveQuery observes transactions natively; never add manual state-syncing or refresh logic on top.
-- `sessions` and `lastUsed` have no writers yet -- the workout execution screen will be the first.
+- `sessions` and `lastUsed` are both written by `session-store`'s `finishSession` (in its single transaction) -- never write them from UI code directly. `recordSetCompletion` touches only `activeSession`, so a discarded session leaves no trace.
+- Completed entries retain their planned slot identity (`itemIndex:memberIndex`). At finish, every set in that slot is attributed to the slot's final session alternative, so a mid-exercise swap cannot split history or `lastUsed` across keys.
+- `finishSession` resolves the completed `dayId` in the latest imported routine and advances to the following day in that latest order. If the completed day no longer exists, the transaction aborts without archiving, advancing, writing `lastUsed`, or deleting the active session.
+- `finishSession` derives `lastUsed` from the normalized completed entries (grouped by final effective key, ordered by set index; same key + setIndex collisions resolve last-completed wins) and pads gaps below `setIndex` with the last known value, or the new values when the record had none.
