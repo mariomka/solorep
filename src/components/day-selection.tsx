@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { startSession } from "@/lib/session-store";
+import { prepareTimerAudio } from "@/lib/timer-feedback";
 import { cn } from "@/lib/utils";
 
 interface DaySelectionProps {
@@ -81,6 +82,9 @@ export function DaySelection({
               type="button"
               className="block w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
               onClick={() => {
+                prepareTimerAudio().catch((error: unknown) => {
+                  console.error("Failed to prepare timer audio", error);
+                });
                 startSession(routineId, day.id, dayIndex)
                   .then(() => {
                     onStartDay(dayIndex);

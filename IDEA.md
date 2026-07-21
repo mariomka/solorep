@@ -23,11 +23,11 @@ Workout app for the gym. 100% frontend, static, deployable to GitHub Pages. No b
      (1,324 exercises, MIT code/data, GIFs © GymVisual). Routine's `datasetId` field = dataset
      exercise id; the app resolves the GIF filename via the dataset's `exercises.json` and
      caches media offline via the service worker. Spanish instructions come for free.
-   - Sets / reps / weight (or duration) — **editable inline**; edits are persisted as "last used" for that key.
+   - Sets / reps / weight — **editable inline**; edits are persisted as "last used" for that key. Duration sets use their prefilled duration and start automatically.
    - Alternatives selector if the exercise defines them.
    - **Continue** and **Back** buttons.
 3. Rest periods between sets/exercises with a countdown.
-4. Time-based exercises run a timer; last 5 seconds get a **big, bold countdown** (5-4-3-2-1) with beep/vibration.
+4. Time-based exercises start their timer automatically and can be paused/resumed; last 5 seconds get a **big, bold countdown** (5-4-3-2-1) with beep/vibration.
 5. Finish the day → session is logged, day pointer advances.
 
 ## Persistence (all local)

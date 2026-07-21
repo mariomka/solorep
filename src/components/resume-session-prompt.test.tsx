@@ -5,9 +5,12 @@ import { db } from "@/lib/db";
 import { parseRoutine } from "@/lib/routine-schema";
 import { buildDayPlan } from "@/lib/session-plan";
 import { startSession } from "@/lib/session-store";
+import { prepareTimerAudio } from "@/lib/timer-feedback";
 import { clearDatabase } from "@/test/helpers";
 import fullbody3d from "../../examples/fullbody-3d.json";
 import { ResumeSessionPrompt } from "./resume-session-prompt";
+
+vi.mock("@/lib/timer-feedback", { spy: true });
 
 const routine = parseRoutine(fullbody3d);
 
@@ -16,7 +19,10 @@ async function seedValidSession(dayIndex = 1): Promise<void> {
   await startSession(routine.id, routine.days[dayIndex].id, dayIndex);
 }
 
-beforeEach(clearDatabase);
+beforeEach(async () => {
+  vi.clearAllMocks();
+  await clearDatabase();
+});
 
 describe("ResumeSessionPrompt", () => {
   it("shows the prompt with the routine and day names for a valid session", async () => {
@@ -45,6 +51,7 @@ describe("ResumeSessionPrompt", () => {
       routineId: routine.id,
       dayIndex: 2,
     });
+    expect(prepareTimerAudio).toHaveBeenCalledTimes(1);
   });
 
   it("discards the session and hides the prompt on Descartar", async () => {

@@ -50,4 +50,37 @@ describe("useCountdown", () => {
     });
     expect(onComplete).not.toHaveBeenCalled();
   });
+
+  it("preserves the exact remaining time while paused", () => {
+    const onComplete = vi.fn();
+    const { result, rerender } = renderHook(
+      ({ isPaused }) => useCountdown(3, onComplete, isPaused),
+      { initialProps: { isPaused: false } },
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(1_250);
+    });
+    expect(result.current).toBe(2);
+
+    rerender({ isPaused: true });
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+    expect(result.current).toBe(2);
+    expect(onComplete).not.toHaveBeenCalled();
+
+    rerender({ isPaused: false });
+    act(() => {
+      vi.advanceTimersByTime(1_500);
+    });
+    expect(result.current).toBe(1);
+    expect(onComplete).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(250);
+    });
+    expect(result.current).toBe(0);
+    expect(onComplete).toHaveBeenCalledTimes(1);
+  });
 });

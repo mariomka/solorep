@@ -128,6 +128,7 @@ Do not invent different list behavior for each screen.
 - Countdowns use `MM:SS`, monospace, and tabular numerals.
 - Timer scale may be intentionally oversized; supporting labels remain quiet editorial eyebrows.
 - An active duration countdown replaces exercise media and supporting actions so the timer and navigation controls fit in one viewport without scrolling.
+- Duration countdowns start automatically; pause/resume is the primary timer action and must remain visible beside navigation controls.
 - Summary metrics use the same monospace numeric language and hairline-row structure.
 
 ## Illustration and media

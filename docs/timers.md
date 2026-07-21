@@ -2,7 +2,7 @@
 
 ## How It Works
 
-- `src/lib/use-countdown.ts` owns timekeeping. It derives remaining time from a fixed wall-clock deadline, so delayed intervals do not introduce drift.
+- `src/lib/use-countdown.ts` owns timekeeping. It derives remaining time from a fixed wall-clock deadline, so delayed intervals do not introduce drift, and preserves the exact remaining milliseconds across pause/resume.
 - `src/lib/timer-feedback.ts` owns synthesized Web Audio cues, vibration, audio-session progressive enhancement, and cancellation.
 - `src/lib/countdown-feedback.ts` maps displayed seconds to cues and prevents duplicate playback. A jump after suspension plays only the current cue, never every missed second.
 - `src/lib/screen-wake-lock.ts` owns the Screen Wake Lock lifecycle independently from countdown and audio logic.
@@ -24,11 +24,12 @@ The default preference enables both sound and vibration, but consumers receive i
 
 The UI integration is intentionally thin:
 
-1. Call `prepareTimerAudio()` from the trusted user gesture that can start each countdown: `Continuar` before a possible rest and `Empezar` for a duration set. Browsers may keep a new `AudioContext` suspended without prior interaction.
-2. Use one `useCountdownFeedback()` instance per visible countdown. It owns a `CountdownFeedbackController` and its cleanup.
-3. Pass each changed positive `remainingSeconds` value to `notifySecond()` and call `notifyComplete()` at `0` before navigating away. Repeated values are ignored.
-4. Call `cancel()` when the user skips or exits. Natural completion deliberately leaves its short final cue alive across navigation.
-5. Call `workoutScreenWakeLock.acquire()` while the workout execution route is active. Call `release()` before summary, exit, or discard.
+1. Duration sets start automatically as soon as their persisted or planned duration is loaded. Pausing freezes the exact remaining time; resuming continues from that instant rather than restarting the displayed second.
+2. Call `prepareTimerAudio()` from trusted gestures that can lead to an automatic countdown: selecting a day, resuming a session, and `Continuar`. Call it again from `Reanudar` after a pause. Browsers may keep a new `AudioContext` suspended without prior interaction.
+3. Use one `useCountdownFeedback()` instance per visible countdown. It owns a `CountdownFeedbackController` and its cleanup.
+4. Pass each changed positive `remainingSeconds` value to `notifySecond()` and call `notifyComplete()` at `0` before navigating away. Repeated values are ignored.
+5. Call `cancel()` when the user pauses, skips, or exits. Natural completion deliberately leaves its short final cue alive across navigation.
+6. Call `workoutScreenWakeLock.acquire()` while the workout execution route is active. Call `release()` before summary, exit, or discard.
 
 Keep `useCountdown` free of sound and platform APIs. Timing is required behavior; feedback is optional behavior.
 

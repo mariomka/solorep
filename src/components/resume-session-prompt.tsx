@@ -13,6 +13,7 @@ import { db } from "@/lib/db";
 import type { RoutineDay } from "@/lib/routine-schema";
 import { buildDayPlan } from "@/lib/session-plan";
 import { discardActiveSession, getActiveSession } from "@/lib/session-store";
+import { prepareTimerAudio } from "@/lib/timer-feedback";
 
 export interface ResumeTarget {
   routineId: string;
@@ -82,6 +83,9 @@ export function ResumeSessionPrompt({ onResume }: ResumeSessionPromptProps) {
           data-test="resume-session-resume"
           className="flex-1"
           onClick={() => {
+            prepareTimerAudio().catch((error: unknown) => {
+              console.error("Failed to prepare timer audio", error);
+            });
             onResume({
               routineId: session.routineId,
               dayIndex: session.dayIndex,

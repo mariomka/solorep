@@ -1,10 +1,4 @@
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   afterEach,
@@ -580,73 +574,47 @@ describe("WorkoutScreen", () => {
     // Day 1: back-squat (4) + bench-press (4) + barbell-row (3) = step 11
     // starts the plank.
     await seedSession(0, 11);
+    await db.lastUsed.put({
+      exerciseKey: "plank",
+      sets: [{ duration: 1 }],
+      updatedAt: Date.now(),
+    });
     renderWorkout();
 
     expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
       "Plancha",
     );
-    const durationInput = screen.getByTestId("set-duration-input");
-    await waitFor(() => expect(durationInput).toHaveValue("45"));
-
-    // setImmediate stays real so fake-indexeddb keeps working under fake timers.
-    vi.useFakeTimers({
-      toFake: [
-        "setTimeout",
-        "clearTimeout",
-        "setInterval",
-        "clearInterval",
-        "Date",
-      ],
-    });
-    // fireEvent instead of userEvent: userEvent's internal waits hang under
-    // vitest fake timers, and the countdown interval must be registered while
-    // timers are faked for the advance below to reach it.
-    fireEvent.click(screen.getByTestId("set-start"));
-
-    expect(prepareTimerAudio).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId("duration-timer")).toHaveTextContent("00:45");
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(40_000);
-    });
-
-    expect(screen.getByTestId("duration-timer")).toHaveTextContent("5");
+    expect(await screen.findByTestId("duration-timer")).toHaveTextContent("1");
     expect(playTimerFeedback).toHaveBeenLastCalledWith("countdown", {
       soundEnabled: true,
       vibrationEnabled: true,
     });
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(5_000);
-    });
-    vi.useRealTimers();
+    const restScreen = await screen.findByTestId(
+      "rest-screen",
+      {},
+      { timeout: 2_000 },
+    );
 
     expect(playTimerFeedback).toHaveBeenLastCalledWith("complete", {
       soundEnabled: true,
       vibrationEnabled: true,
     });
-    expect(await screen.findByTestId("rest-screen")).toHaveTextContent(
-      "Descanso",
-    );
+    expect(restScreen).toHaveTextContent("Descanso");
     const session = await db.activeSession.get("current");
     expect(session?.completed.at(-1)).toMatchObject({
       stepIndex: 11,
       exerciseKey: "plank",
       setIndex: 0,
-      duration: 45,
+      duration: 1,
     });
   });
 
-  it("completes a duration set through Saltar with the edited duration", async () => {
+  it("completes an automatically started duration set through Saltar", async () => {
     await seedSession(0, 11);
     const user = userEvent.setup();
     renderWorkout();
 
-    const durationInput = await screen.findByTestId("set-duration-input");
-    await waitFor(() => expect(durationInput).toHaveValue("45"));
-    await user.clear(durationInput);
-    await user.type(durationInput, "30");
-    await user.click(screen.getByTestId("set-start"));
     await user.click(await screen.findByTestId("duration-skip"));
 
     expect(stopTimerFeedback).toHaveBeenCalled();
@@ -662,7 +630,7 @@ describe("WorkoutScreen", () => {
       stepIndex: 11,
       exerciseKey: "plank",
       setIndex: 0,
-      duration: 30,
+      duration: 45,
     });
   });
 

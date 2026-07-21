@@ -62,16 +62,27 @@ test("completes a full session and advances the day pointer", async ({
   await expect(exerciseName).toHaveText("Extensión de tríceps");
   await continueButton.click();
 
-  // Duration set: start the countdown, then skip it.
+  // Duration set: the countdown starts automatically and can be paused.
   await expect(exerciseName).toBeVisible();
   await expect(exerciseName).toHaveText("Plancha");
   await page.setViewportSize({ width: 345, height: 713 });
-  await page.getByTestId("set-start").click();
   await expect(page.getByTestId("duration-countdown-screen")).toBeVisible();
   const hasVerticalScroll = await page.evaluate(
     () => document.documentElement.scrollHeight > window.innerHeight,
   );
   expect(hasVerticalScroll).toBe(false);
+  const durationTimer = page.getByTestId("duration-timer");
+  const pauseButton = page.getByTestId("duration-pause");
+  await pauseButton.click();
+  await expect(pauseButton).toHaveText("Reanudar");
+  const pausedCountdownText = await durationTimer.textContent();
+  if (pausedCountdownText === null) {
+    throw new Error("Duration timer has no text while paused.");
+  }
+  await page.waitForTimeout(1_100);
+  await expect(durationTimer).toHaveText(pausedCountdownText);
+  await pauseButton.click();
+  await expect(pauseButton).toHaveText("Pausar");
   await page.getByTestId("duration-skip").click();
 
   // Summary: 5 sets. lastUsed is only written at finishSession, so every

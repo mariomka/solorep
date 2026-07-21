@@ -94,26 +94,29 @@ describe("SetScreen", () => {
     expect(screen.getByTestId("set-exercise-note")).toBeInTheDocument();
   });
 
-  it("replaces exercise content with a compact duration countdown", async () => {
+  it("starts a compact duration countdown automatically and toggles pause", async () => {
     const user = userEvent.setup();
     renderSetScreen(
       vi.fn(async () => {}),
       durationStep,
     );
 
-    await waitFor(() => {
-      expect(screen.getByTestId("set-duration-input")).toHaveValue("30");
-    });
-    expect(await screen.findByTestId("set-exercise-gif")).toBeInTheDocument();
-
-    await user.click(screen.getByTestId("set-start"));
-
-    expect(screen.getByTestId("duration-countdown-screen")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("duration-countdown-screen"),
+    ).toBeInTheDocument();
     expect(screen.getByTestId("duration-timer")).toHaveTextContent("00:30");
+    expect(screen.queryByTestId("set-duration-input")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("set-start")).not.toBeInTheDocument();
     expect(screen.queryByTestId("set-exercise-gif")).not.toBeInTheDocument();
     expect(screen.queryByTestId("set-exercise-note")).not.toBeInTheDocument();
     expect(screen.queryByTestId("technique-trigger")).not.toBeInTheDocument();
     expect(screen.getByTestId("set-previous")).toBeInTheDocument();
+    const pauseButton = screen.getByTestId("duration-pause");
+    expect(pauseButton).toHaveTextContent("Pausar");
+    await user.click(pauseButton);
+    expect(pauseButton).toHaveTextContent("Reanudar");
+    await user.click(pauseButton);
+    expect(pauseButton).toHaveTextContent("Pausar");
     expect(screen.getByTestId("duration-skip")).toBeInTheDocument();
   });
 });

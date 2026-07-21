@@ -102,12 +102,13 @@ function DurationCountdown({
   onFinished,
   onPrevious,
 }: DurationCountdownProps) {
+  const [isPaused, setIsPaused] = useState(false);
   const { notifySecond, notifyComplete, cancel } = useCountdownFeedback();
   const handleTimerFinished = () => {
     notifyComplete();
     onFinished();
   };
-  const remainingSeconds = useCountdown(seconds, handleTimerFinished);
+  const remainingSeconds = useCountdown(seconds, handleTimerFinished, isPaused);
   useEffect(() => {
     notifySecond(remainingSeconds);
   }, [notifySecond, remainingSeconds]);
@@ -120,6 +121,18 @@ function DurationCountdown({
   const handleSkip = () => {
     cancel();
     onFinished();
+  };
+
+  const handlePauseToggle = () => {
+    const isResuming = isPaused;
+    if (isResuming) {
+      prepareTimerAudio().catch((error: unknown) => {
+        console.error("Failed to prepare timer audio", error);
+      });
+    } else {
+      cancel();
+    }
+    setIsPaused(!isPaused);
   };
 
   return (
@@ -159,8 +172,14 @@ function DurationCountdown({
           Anterior
         </Button>
         <Button
-          data-test="duration-skip"
+          data-test="duration-pause"
           className="flex-1"
+          onClick={handlePauseToggle}
+        >
+          {isPaused ? "Reanudar" : "Pausar"}
+        </Button>
+        <Button
+          data-test="duration-skip"
           variant="outline"
           onClick={handleSkip}
         >
@@ -213,6 +232,7 @@ export function SetScreen({
 
   useEffect(() => {
     setIsCountdownRunning(false);
+    const shouldStartDurationCountdown = "duration" in step.plannedSet;
 
     const matchesPlannedOccurrence =
       completedEntry !== undefined &&
@@ -221,6 +241,7 @@ export function SetScreen({
       setRepsInput(completedEntry.reps?.toString() ?? "");
       setDurationInput(completedEntry.duration?.toString() ?? "");
       setWeightInput(completedEntry.weight?.toString() ?? "");
+      setIsCountdownRunning(shouldStartDurationCountdown);
       return;
     }
 
@@ -239,6 +260,7 @@ export function SetScreen({
         setRepsInput(prefill.reps?.toString() ?? "");
         setDurationInput(prefill.duration?.toString() ?? "");
         setWeightInput(prefill.weight?.toString() ?? "");
+        setIsCountdownRunning(shouldStartDurationCountdown);
       })
       .catch((error: unknown) => {
         console.error("Failed to load last used values", error);
@@ -255,7 +277,6 @@ export function SetScreen({
 
   const canContinue =
     parsedReps !== undefined && weightParse.isValid && !isSwapPending;
-  const canStartCountdown = parsedDuration !== undefined && !isSwapPending;
 
   const submitCompletion = (values: LoggedSetValues) => {
     // Guards against double submission (double tap, or the countdown firing
@@ -295,7 +316,7 @@ export function SetScreen({
     submitCompletion({ duration: parsedDuration });
   };
 
-  const handleStartCountdown = () => {
+  const handleRetryCountdown = () => {
     prepareTimerAudio().catch((error: unknown) => {
       console.error("Failed to prepare timer audio", error);
     });
@@ -335,6 +356,11 @@ export function SetScreen({
   const completedStepIndexSet = new Set(completedStepIndexes);
   const isDurationCountdownVisible =
     !isRepsSet && isCountdownRunning && parsedDuration !== undefined;
+  const isDurationRetryVisible =
+    !isRepsSet &&
+    !isCountdownRunning &&
+    parsedDuration !== undefined &&
+    errorMessage !== undefined;
 
   return (
     <div
@@ -531,10 +557,10 @@ export function SetScreen({
         />
       )}
 
-      {!isDurationCountdownVisible && (
+      {!isDurationCountdownVisible && (isRepsSet || isDurationRetryVisible) && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 supports-backdrop-filter:backdrop-blur-sm">
           <div className="mx-auto flex w-full max-w-md flex-col gap-4 pt-4 pr-[max(1.25rem,env(safe-area-inset-right))] pb-[max(1.25rem,env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))]">
-            {isRepsSet ? (
+            {isRepsSet && (
               <div className="flex gap-3">
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <label
@@ -569,25 +595,6 @@ export function SetScreen({
                   />
                 </div>
               </div>
-            ) : (
-              !isCountdownRunning && (
-                <div className="flex flex-col gap-1">
-                  <label
-                    htmlFor="set-duration"
-                    className="text-[0.625rem] font-semibold tracking-widest text-muted-foreground uppercase"
-                  >
-                    Duración (segundos)
-                  </label>
-                  <Input
-                    id="set-duration"
-                    data-test="set-duration-input"
-                    inputMode="numeric"
-                    value={durationInput}
-                    className="h-14 font-heading text-3xl font-semibold tabular-nums md:text-3xl"
-                    onChange={(event) => setDurationInput(event.target.value)}
-                  />
-                </div>
-              )
             )}
             {errorMessage !== undefined && (
               <p
@@ -617,14 +624,13 @@ export function SetScreen({
                   Continuar
                 </Button>
               ) : (
-                !isCountdownRunning && (
+                isDurationRetryVisible && (
                   <Button
-                    data-test="set-start"
+                    data-test="duration-retry"
                     className="flex-1"
-                    onClick={handleStartCountdown}
-                    disabled={!canStartCountdown}
+                    onClick={handleRetryCountdown}
                   >
-                    Empezar
+                    Reintentar
                   </Button>
                 )
               )}
