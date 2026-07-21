@@ -78,7 +78,9 @@ function App() {
     <main className="mx-auto flex min-h-svh w-full max-w-md flex-col gap-6 p-4">
       {screen.name === "list" && (
         <>
-          <h1 className="font-heading text-4xl font-bold">Solorep</h1>
+          <h1 className="font-heading text-4xl font-black tracking-[-1px] uppercase">
+            Solorep
+          </h1>
           <ResumeSessionPrompt
             onResume={({ routineId, dayIndex }) => {
               setScreen({ name: "workout", routineId, dayIndex });

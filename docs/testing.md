@@ -11,7 +11,9 @@
 
 - `beforeEach(clearDatabase)` in every suite touching the DB -- fake-indexeddb persists state within a test file (Vitest isolates files per worker, so no cross-file bleed).
 - Content driven by `useLiveQuery`: use `findBy*` / `waitFor`, never `getBy*` -- first render is `undefined` and `getBy*` will flake.
-- Test behavior, not implementation (counts, visible text, DB rows -- not internal calls).
+- Test behavior, not implementation (user-visible output, interactions, persisted state -- not internal calls or CSS utility classes). Never assert Tailwind classes with `toHaveClass`; verify styling visually.
+- Accessibility is required in the implementation, but is not tested with dedicated assertions.
+- Select DOM elements exclusively through `data-test` attributes. Never couple test selectors to CSS classes, visible copy, accessibility attributes, or document structure.
 
 ## Gotchas
 
