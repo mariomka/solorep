@@ -104,7 +104,7 @@ describe("timer feedback", () => {
     expect(gain.gain.setValueAtTime).toHaveBeenCalledWith(0.0001, 10);
     expect(gain.gain.exponentialRampToValueAtTime).toHaveBeenNthCalledWith(
       1,
-      0.25,
+      0.45,
       10.005,
     );
     expect(vibrate).toHaveBeenCalledExactlyOnceWith(35);
@@ -115,7 +115,7 @@ describe("timer feedback", () => {
 
     await playTimerFeedback("complete");
 
-    const { oscillators } = audioContexts[0];
+    const { gains, oscillators } = audioContexts[0];
     expect(oscillators).toHaveLength(2);
     expect(oscillators[0].frequency.setValueAtTime).toHaveBeenCalledWith(
       880,
@@ -127,6 +127,15 @@ describe("timer feedback", () => {
       10.14,
     );
     expect(oscillators[1].stop).toHaveBeenCalledWith(10.3);
+    expect(gains[0].gain.exponentialRampToValueAtTime).toHaveBeenNthCalledWith(
+      1,
+      0.55,
+      10.005,
+    );
+    const [secondTonePeakGain, secondToneAttackTime] =
+      gains[1].gain.exponentialRampToValueAtTime.mock.calls[0];
+    expect(secondTonePeakGain).toBe(0.55);
+    expect(secondToneAttackTime).toBeCloseTo(10.145);
     expect(vibrate).toHaveBeenCalledExactlyOnceWith([80, 50, 140]);
   });
 

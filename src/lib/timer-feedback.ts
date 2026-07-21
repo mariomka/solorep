@@ -25,7 +25,8 @@ interface AudioSessionNavigator extends Navigator {
 
 const MINIMUM_GAIN = 0.0001;
 const ATTACK_SECONDS = 0.005;
-const PEAK_GAIN = 0.25;
+const COUNTDOWN_PEAK_GAIN = 0.45;
+const COMPLETION_PEAK_GAIN = 0.55;
 
 const TONES: Record<TimerFeedbackCue, ToneDefinition[]> = {
   countdown: [
@@ -33,7 +34,7 @@ const TONES: Record<TimerFeedbackCue, ToneDefinition[]> = {
       frequencyHz: 880,
       delaySeconds: 0,
       durationSeconds: 0.075,
-      peakGain: PEAK_GAIN,
+      peakGain: COUNTDOWN_PEAK_GAIN,
     },
   ],
   complete: [
@@ -41,13 +42,13 @@ const TONES: Record<TimerFeedbackCue, ToneDefinition[]> = {
       frequencyHz: 880,
       delaySeconds: 0,
       durationSeconds: 0.1,
-      peakGain: PEAK_GAIN,
+      peakGain: COMPLETION_PEAK_GAIN,
     },
     {
       frequencyHz: 1320,
       delaySeconds: 0.14,
       durationSeconds: 0.16,
-      peakGain: PEAK_GAIN,
+      peakGain: COMPLETION_PEAK_GAIN,
     },
   ],
 };

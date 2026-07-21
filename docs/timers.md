@@ -16,7 +16,7 @@ Timer completion must never depend on audio, vibration, or Wake Lock succeeding.
 | Seconds 5 through 1 | 880 Hz triangle wave, 75 ms | 35 ms |
 | Completion | 880 Hz for 100 ms, then 1320 Hz for 160 ms | 80 ms, 50 ms pause, 140 ms |
 
-Tones use a 0.25 peak gain, 5 ms attack, and exponential decay to stay audible without speaker clicks. They are synthesized at runtime: no audio asset, fetch, decode, or offline cache is required.
+Countdown tones use a 0.45 peak gain and the completion cue uses 0.55. Both use a 5 ms attack and exponential decay to stay audible without speaker clicks. They are synthesized at runtime: no audio asset, fetch, decode, or offline cache is required.
 
 The default preference enables both sound and vibration, but consumers receive independent `soundEnabled` and `vibrationEnabled` flags. Do not collapse them into one setting.
 
