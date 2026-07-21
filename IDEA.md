@@ -20,7 +20,7 @@ Workout app for the gym. 100% frontend, static, deployable to GitHub Pages. No b
 1. Open app → choose routine → choose day (default: the next day in the loop).
 2. For each exercise, show:
    - Name + animation: GIFs from [exercises-dataset](https://github.com/hasaneyldrm/exercises-dataset)
-     (1,324 exercises, MIT code/data, GIFs © GymVisual). Routine's `media` field = dataset
+     (1,324 exercises, MIT code/data, GIFs © GymVisual). Routine's `datasetId` field = dataset
      exercise id; the app resolves the GIF filename via the dataset's `exercises.json` and
      caches media offline via the service worker. Spanish instructions come for free.
    - Sets / reps / weight (or duration) — **editable inline**; edits are persisted as "last used" for that key.

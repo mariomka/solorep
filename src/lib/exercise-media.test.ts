@@ -11,18 +11,18 @@ describe("getExerciseGifUrl", () => {
     );
   });
 
-  it("returns undefined for an unknown media id", () => {
+  it("returns undefined for an unknown dataset id", () => {
     expect(getExerciseGifUrl("9999999")).toBeUndefined();
   });
 
-  it("resolves every media id used by the sample routine", () => {
-    const mediaIds = Object.values(fullbody3d.exercises)
-      .map((entry) => ("media" in entry ? entry.media : undefined))
-      .filter((mediaId): mediaId is string => mediaId !== undefined);
+  it("resolves every dataset id used by the sample routine", () => {
+    const datasetIds = Object.values(fullbody3d.exercises)
+      .map((entry) => ("datasetId" in entry ? entry.datasetId : undefined))
+      .filter((datasetId): datasetId is string => datasetId !== undefined);
 
-    expect(mediaIds.length).toBeGreaterThan(0);
-    for (const mediaId of mediaIds) {
-      expect(getExerciseGifUrl(mediaId), mediaId).toBeDefined();
+    expect(datasetIds.length).toBeGreaterThan(0);
+    for (const datasetId of datasetIds) {
+      expect(getExerciseGifUrl(datasetId), datasetId).toBeDefined();
     }
   });
 });

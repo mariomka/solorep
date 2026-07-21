@@ -11,9 +11,9 @@ The contract between routine-authoring agents and the app. Validated with Zod on
   "description": "Optional free text",
   "exercises": {
     // Catalog: every key used in days[] must exist here.
-    // `media` is the exercise id in https://github.com/hasaneyldrm/exercises-dataset
-    // (e.g. "0025"); the app resolves the GIF via the dataset's exercises.json.
-    "bench-press": { "name": "Press banca", "media": "bench-press" },
+    // `datasetId` is the exercise id in https://github.com/hasaneyldrm/exercises-dataset
+    // (e.g. "0025"); the app resolves the GIF and the localized instructions from it.
+    "bench-press": { "name": "Press banca", "datasetId": "0025" },
     "dumbbell-press": { "name": "Press mancuernas" },
     "goblet-squat": { "name": "Goblet Squat" },
     "plank": { "name": "Plancha" }

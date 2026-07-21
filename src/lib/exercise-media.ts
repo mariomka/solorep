@@ -4,11 +4,11 @@ const MEDIA_BASE_URL = `https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-datase
 
 const gifFiles: Record<string, string> = mediaMap.files;
 
-export function getExerciseGifUrl(mediaId: string): string | undefined {
-  const gifFileName = gifFiles[mediaId];
-  const isKnownMediaId = gifFileName !== undefined;
+export function getExerciseGifUrl(datasetId: string): string | undefined {
+  const gifFileName = gifFiles[datasetId];
+  const isKnownDatasetId = gifFileName !== undefined;
 
-  if (!isKnownMediaId) {
+  if (!isKnownDatasetId) {
     return undefined;
   }
 

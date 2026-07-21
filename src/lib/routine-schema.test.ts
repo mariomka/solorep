@@ -9,7 +9,7 @@ function validRoutine(): RoutineInput {
     id: "fullbody-3d",
     name: "Full Body — 3 días",
     exercises: {
-      "bench-press": { name: "Press banca", media: "0025" },
+      "bench-press": { name: "Press banca", datasetId: "0025" },
       "dumbbell-press": { name: "Press mancuernas" },
       plank: { name: "Plancha" },
       "biceps-curl": { name: "Curl bíceps" },

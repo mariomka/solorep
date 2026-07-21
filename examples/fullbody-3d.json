@@ -3,40 +3,49 @@
   "name": "Full Body — 3 días",
   "description": "Rutina full body de tres días con progresión de carga básica.",
   "exercises": {
-    "back-squat": { "name": "Sentadilla con barra", "media": "0043" },
-    "leg-press": { "name": "Prensa de piernas", "media": "0739" },
-    "bench-press": { "name": "Press banca", "media": "0025" },
+    "back-squat": { "name": "Sentadilla con barra", "datasetId": "0043" },
+    "leg-press": { "name": "Prensa de piernas", "datasetId": "0739" },
+    "bench-press": { "name": "Press banca", "datasetId": "0025" },
     "dumbbell-bench-press": {
       "name": "Press banca con mancuernas",
-      "media": "0289"
+      "datasetId": "0289"
     },
-    "barbell-row": { "name": "Remo con barra", "media": "0027" },
-    "cable-seated-row": { "name": "Remo sentado en polea", "media": "0861" },
-    "plank": { "name": "Plancha", "media": "2135" },
-    "deadlift": { "name": "Peso muerto", "media": "0032" },
-    "romanian-deadlift": { "name": "Peso muerto rumano", "media": "0085" },
-    "overhead-press": { "name": "Press militar", "media": "0091" },
+    "barbell-row": { "name": "Remo con barra", "datasetId": "0027" },
+    "cable-seated-row": {
+      "name": "Remo sentado en polea",
+      "datasetId": "0861"
+    },
+    "plank": { "name": "Plancha", "datasetId": "2135" },
+    "deadlift": { "name": "Peso muerto", "datasetId": "0032" },
+    "romanian-deadlift": { "name": "Peso muerto rumano", "datasetId": "0085" },
+    "overhead-press": { "name": "Press militar", "datasetId": "0091" },
     "dumbbell-shoulder-press": {
       "name": "Press de hombro con mancuernas",
-      "media": "0405"
+      "datasetId": "0405"
     },
-    "lat-pulldown": { "name": "Jalón al pecho", "media": "0198" },
-    "pull-up": { "name": "Dominadas", "media": "0652" },
-    "biceps-curl": { "name": "Curl de bíceps con mancuernas", "media": "0294" },
+    "lat-pulldown": { "name": "Jalón al pecho", "datasetId": "0198" },
+    "pull-up": { "name": "Dominadas", "datasetId": "0652" },
+    "biceps-curl": {
+      "name": "Curl de bíceps con mancuernas",
+      "datasetId": "0294"
+    },
     "triceps-pushdown": {
       "name": "Extensión de tríceps en polea",
-      "media": "0201"
+      "datasetId": "0201"
     },
-    "front-squat": { "name": "Sentadilla frontal", "media": "0042" },
-    "dumbbell-lunge": { "name": "Zancadas con mancuernas", "media": "0336" },
+    "front-squat": { "name": "Sentadilla frontal", "datasetId": "0042" },
+    "dumbbell-lunge": {
+      "name": "Zancadas con mancuernas",
+      "datasetId": "0336"
+    },
     "incline-dumbbell-press": {
       "name": "Press inclinado con mancuernas",
-      "media": "0314"
+      "datasetId": "0314"
     },
-    "lateral-raise": { "name": "Elevaciones laterales", "media": "0334" },
+    "lateral-raise": { "name": "Elevaciones laterales", "datasetId": "0334" },
     "rear-delt-row": {
       "name": "Remo para deltoides posterior",
-      "media": "0076"
+      "datasetId": "0076"
     }
   },
   "days": [
