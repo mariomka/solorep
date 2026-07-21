@@ -6,7 +6,11 @@ import {
   useState,
 } from "react";
 import { RestScreen } from "@/components/rest-screen";
-import { type CompletedSetEntry, SetScreen } from "@/components/set-screen";
+import {
+  type CompletedSetEntry,
+  SetScreen,
+  type WorkoutProgressGroup,
+} from "@/components/set-screen";
 import type { ActiveSessionRecord } from "@/lib/db";
 import type { Routine } from "@/lib/routine-schema";
 import {
@@ -166,6 +170,29 @@ function WorkoutSessionView({
     ).length;
   }, [plan, step]);
 
+  const progressGroups = useMemo(() => {
+    const stepIndexesBySlot = new Map<string, number[]>();
+
+    plan.forEach((planStep, planStepIndex) => {
+      const planSlotKey = swapKey(planStep.itemIndex, planStep.memberIndex);
+      const existingStepIndexes = stepIndexesBySlot.get(planSlotKey) ?? [];
+      existingStepIndexes.push(planStepIndex);
+      stepIndexesBySlot.set(planSlotKey, existingStepIndexes);
+    });
+
+    return Array.from(
+      stepIndexesBySlot,
+      ([slotKey, stepIndexes]): WorkoutProgressGroup => ({
+        slotKey,
+        stepIndexes,
+      }),
+    );
+  }, [plan]);
+
+  const completedStepIndexes = Object.values(state.completed).map(
+    (entry) => entry.stepIndex,
+  );
+
   if (step === undefined) {
     return null;
   }
@@ -229,6 +256,10 @@ function WorkoutSessionView({
       effectiveExerciseKey={effectiveExerciseKey}
       setNumber={step.setIndex + 1}
       totalSets={totalSets}
+      dayName={day.name}
+      currentStepIndex={state.stepIndex}
+      progressGroups={progressGroups}
+      completedStepIndexes={completedStepIndexes}
       completedEntry={state.completed[state.stepIndex]}
       isFirstStep={state.stepIndex === 0}
       onComplete={handleSetCompleted}

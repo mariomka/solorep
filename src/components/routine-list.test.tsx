@@ -61,7 +61,25 @@ describe("RoutineList", () => {
     expect(onSelectRoutine).toHaveBeenCalledExactlyOnceWith(routine.id);
   });
 
-  it("deletes a routine and its progress from the delete button", async () => {
+  it("opens the file chooser from the populated routines menu", async () => {
+    await db.routines.put({ id: routine.id, routine, importedAt: Date.now() });
+
+    const user = userEvent.setup();
+    render(<RoutineList onSelectRoutine={vi.fn()} />);
+
+    const fileInput = await screen.findByTestId("import-routine-input");
+    const clickFileInput = vi
+      .spyOn(fileInput, "click")
+      .mockImplementation(() => {});
+
+    await user.click(screen.getByTestId("routines-menu-trigger"));
+    await user.click(await screen.findByTestId("import-routine-menu-item"));
+
+    expect(clickFileInput).toHaveBeenCalledOnce();
+    expect(fileInput).toBeInTheDocument();
+  });
+
+  it("deletes a routine and its progress from the routine menu", async () => {
     await db.routines.put({ id: routine.id, routine, importedAt: Date.now() });
     await db.progress.put({ routineId: routine.id, currentDayIndex: 1 });
 
@@ -69,10 +87,8 @@ describe("RoutineList", () => {
     const user = userEvent.setup();
     render(<RoutineList onSelectRoutine={onSelectRoutine} />);
 
-    const deleteButton = await screen.findByTestId(
-      "routine-delete-fullbody-3d",
-    );
-    await user.click(deleteButton);
+    await user.click(await screen.findByTestId("routine-menu-fullbody-3d"));
+    await user.click(await screen.findByTestId("delete-routine-fullbody-3d"));
 
     await waitFor(() => {
       expect(

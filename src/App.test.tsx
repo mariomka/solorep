@@ -37,9 +37,9 @@ describe("App", () => {
 
     expect(screen.getByTestId("app-shell")).toBeInTheDocument();
     expect(screen.getByTestId("app-title")).toHaveTextContent("Solorep");
-    expect(screen.getByTestId("import-routine-trigger")).toHaveTextContent(
-      "Importar rutina",
-    );
+    expect(
+      await screen.findByTestId("import-routine-trigger"),
+    ).toHaveTextContent("Importar rutina");
     expect(await screen.findByTestId("routine-list-empty")).toHaveTextContent(
       "Importa una rutina para empezar.",
     );
@@ -49,7 +49,7 @@ describe("App", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    const input = screen.getByTestId("import-routine-input");
+    const input = await screen.findByTestId("import-routine-input");
     await user.upload(input, makeRoutineFile(fullbody3d));
 
     expect(
@@ -64,7 +64,7 @@ describe("App", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    const input = screen.getByTestId("import-routine-input");
+    const input = await screen.findByTestId("import-routine-input");
     await user.upload(input, makeRoutineFile(fullbody3d));
 
     const routineCard = await screen.findByTestId("routine-card-fullbody-3d");
@@ -85,7 +85,7 @@ describe("App", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    const input = screen.getByTestId("import-routine-input");
+    const input = await screen.findByTestId("import-routine-input");
     await user.upload(input, makeRoutineFile(fullbody3d));
 
     const routineCard = await screen.findByTestId("routine-card-fullbody-3d");
@@ -106,7 +106,7 @@ describe("App", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    const input = screen.getByTestId("import-routine-input");
+    const input = await screen.findByTestId("import-routine-input");
     await user.upload(input, makeRoutineFile(miniRoutineData));
 
     await user.click(await screen.findByTestId("routine-card-mini"));

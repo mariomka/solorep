@@ -8,9 +8,9 @@ const emptyStateText = "Importa una rutina para empezar.";
 test("imports, persists, and deletes a routine", async ({ page }) => {
   await page.goto("/");
 
-  const emptyState = page.getByTestId("routine-list-empty");
-  await expect(emptyState).toBeVisible();
-  await expect(emptyState).toHaveText(emptyStateText);
+  const emptyStateMessage = page.getByTestId("routine-list-empty-message");
+  await expect(emptyStateMessage).toBeVisible();
+  await expect(emptyStateMessage).toHaveText(emptyStateText);
 
   const fileInput = page.getByTestId("import-routine-input");
   await fileInput.setInputFiles(routineFile);
@@ -27,15 +27,20 @@ test("imports, persists, and deletes a routine", async ({ page }) => {
   await expect(routineNameElement).toBeVisible();
   await expect(routineNameElement).toHaveText(routineName);
 
-  await page.getByTestId(`routine-delete-${routineId}`).click();
+  await page.getByTestId("routines-menu-trigger").click();
+  await expect(page.getByTestId("import-routine-menu-item")).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await page.getByTestId(`routine-menu-${routineId}`).click();
+  await page.getByTestId(`delete-routine-${routineId}`).click();
 
   await expect(routineNameElement).not.toBeVisible();
-  await expect(emptyState).toBeVisible();
-  await expect(emptyState).toHaveText(emptyStateText);
+  await expect(emptyStateMessage).toBeVisible();
+  await expect(emptyStateMessage).toHaveText(emptyStateText);
 
   await page.reload();
 
   await expect(routineNameElement).not.toBeVisible();
-  await expect(emptyState).toBeVisible();
-  await expect(emptyState).toHaveText(emptyStateText);
+  await expect(emptyStateMessage).toBeVisible();
+  await expect(emptyStateMessage).toHaveText(emptyStateText);
 });

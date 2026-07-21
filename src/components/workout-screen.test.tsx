@@ -17,6 +17,7 @@ import {
 } from "vitest";
 import { db } from "@/lib/db";
 import { parseRoutine } from "@/lib/routine-schema";
+import { buildDayPlan, swapKey } from "@/lib/session-plan";
 import {
   recordSetCompletion,
   recordSwap,
@@ -29,6 +30,47 @@ import { WorkoutScreen } from "./workout-screen";
 vi.mock("@/lib/session-store", { spy: true });
 
 const routine = parseRoutine(fullbody3d);
+const groupedProgressRoutine = parseRoutine({
+  id: "grouped-progress",
+  name: "Grouped progress",
+  exercises: {
+    squat: { name: "Squat" },
+    curl: { name: "Curl" },
+    extension: { name: "Extension" },
+    plank: { name: "Plank" },
+  },
+  days: [
+    {
+      id: "progress-day",
+      name: "Progress day",
+      exercises: [
+        {
+          exercise: "squat",
+          rest: 60,
+          sets: [{ reps: 10 }, { reps: 8 }],
+        },
+        {
+          superset: [
+            {
+              exercise: "curl",
+              sets: [{ reps: 12 }, { reps: 10 }],
+            },
+            {
+              exercise: "extension",
+              sets: [{ reps: 12 }, { reps: 10 }],
+            },
+          ],
+          rest: 60,
+        },
+        {
+          exercise: "plank",
+          rest: 60,
+          sets: [{ duration: 30 }],
+        },
+      ],
+    },
+  ],
+});
 
 // Radix Select relies on pointer-capture and scroll APIs jsdom lacks.
 beforeAll(() => {
@@ -72,6 +114,56 @@ function renderWorkout(dayIndex = 0) {
   return { onDayCompleted, onExit };
 }
 
+async function seedGroupedProgressSession(
+  currentStepIndex: number,
+  completedStepIndexes: number[],
+): Promise<void> {
+  await db.routines.put({
+    id: groupedProgressRoutine.id,
+    routine: groupedProgressRoutine,
+    importedAt: Date.now(),
+  });
+  await startSession(groupedProgressRoutine.id, "progress-day", 0);
+
+  const day = groupedProgressRoutine.days[0];
+  const plan = buildDayPlan(day);
+  const completed = completedStepIndexes.map((stepIndex) => {
+    const step = plan[stepIndex];
+    if (step === undefined) {
+      throw new Error(`Missing grouped progress step ${stepIndex}.`);
+    }
+
+    const slotKey = swapKey(step.itemIndex, step.memberIndex);
+    return {
+      stepIndex,
+      slotKey,
+      primaryExerciseKey: step.primaryExerciseKey,
+      exerciseKey: step.primaryExerciseKey,
+      setIndex: step.setIndex,
+      reps: "reps" in step.plannedSet ? step.plannedSet.reps : undefined,
+      duration:
+        "duration" in step.plannedSet ? step.plannedSet.duration : undefined,
+      completedAt: Date.now(),
+    };
+  });
+
+  await db.activeSession.update("current", {
+    currentStepIndex,
+    completed,
+  });
+}
+
+function renderGroupedProgressWorkout() {
+  render(
+    <WorkoutScreen
+      routine={groupedProgressRoutine}
+      dayIndex={0}
+      onDayCompleted={vi.fn()}
+      onExit={vi.fn()}
+    />,
+  );
+}
+
 describe("WorkoutScreen", () => {
   it("renders the first step with last-used values over routine values", async () => {
     await seedSession(0);
@@ -96,6 +188,90 @@ describe("WorkoutScreen", () => {
     expect(weightInput).toHaveValue("55");
   });
 
+  it("groups standalone sets and interleaved superset members by exercise slot", async () => {
+    await seedGroupedProgressSession(0, []);
+    renderGroupedProgressWorkout();
+
+    await screen.findByTestId("workout-progress-step-0");
+
+    expect(screen.getAllByTestId(/^workout-progress-group-/)).toHaveLength(4);
+    expect(screen.getByTestId("workout-progress-step-0")).toHaveAttribute(
+      "data-group",
+      "0:0",
+    );
+    expect(screen.getByTestId("workout-progress-step-1")).toHaveAttribute(
+      "data-group",
+      "0:0",
+    );
+    expect(screen.getByTestId("workout-progress-step-2")).toHaveAttribute(
+      "data-group",
+      "1:0",
+    );
+    expect(screen.getByTestId("workout-progress-step-4")).toHaveAttribute(
+      "data-group",
+      "1:0",
+    );
+    expect(screen.getByTestId("workout-progress-step-3")).toHaveAttribute(
+      "data-group",
+      "1:1",
+    );
+    expect(screen.getByTestId("workout-progress-step-5")).toHaveAttribute(
+      "data-group",
+      "1:1",
+    );
+    expect(screen.getByTestId("workout-progress-step-6")).toHaveAttribute(
+      "data-group",
+      "2:0",
+    );
+  });
+
+  it("marks completed, current, and pending steps across back navigation", async () => {
+    await seedGroupedProgressSession(3, [0, 1, 2]);
+    const user = userEvent.setup();
+    renderGroupedProgressWorkout();
+
+    expect(
+      await screen.findByTestId("workout-progress-step-0"),
+    ).toHaveAttribute("data-state", "completed");
+    expect(screen.getByTestId("workout-progress-step-1")).toHaveAttribute(
+      "data-state",
+      "completed",
+    );
+    expect(screen.getByTestId("workout-progress-step-2")).toHaveAttribute(
+      "data-state",
+      "completed",
+    );
+    expect(screen.getByTestId("workout-progress-step-3")).toHaveAttribute(
+      "data-state",
+      "current",
+    );
+    expect(screen.getByTestId("workout-progress-step-4")).toHaveAttribute(
+      "data-state",
+      "pending",
+    );
+    expect(screen.getByTestId("workout-progress-step-5")).toHaveAttribute(
+      "data-state",
+      "pending",
+    );
+    expect(screen.getByTestId("workout-progress-step-6")).toHaveAttribute(
+      "data-state",
+      "pending",
+    );
+
+    await user.click(screen.getByTestId("set-previous"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("workout-progress-step-2")).toHaveAttribute(
+        "data-state",
+        "current",
+      );
+    });
+    expect(screen.getByTestId("workout-progress-step-3")).toHaveAttribute(
+      "data-state",
+      "pending",
+    );
+  });
+
   it("continues into rest, records the completion, and skipping rest advances", async () => {
     await seedSession(0);
     const user = userEvent.setup();
@@ -108,7 +284,7 @@ describe("WorkoutScreen", () => {
     expect(await screen.findByTestId("rest-screen")).toHaveTextContent(
       "Descanso",
     );
-    expect(screen.getByTestId("rest-timer")).toHaveTextContent("120");
+    expect(screen.getByTestId("rest-timer")).toHaveTextContent("02:00");
 
     const session = await db.activeSession.get("current");
     expect(session?.completed[0]).toMatchObject({
@@ -143,9 +319,11 @@ describe("WorkoutScreen", () => {
     await user.click(screen.getByTestId("set-continue"));
 
     // Member B follows directly, no rest screen in between.
-    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
-      "Extensión de tríceps en polea",
-    );
+    await waitFor(() => {
+      expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+        "Extensión de tríceps en polea",
+      );
+    });
     expect(screen.queryByTestId("rest-screen")).not.toBeInTheDocument();
     expect(screen.getByTestId("set-progress")).toHaveTextContent(
       "Serie 1 de 3",
@@ -158,7 +336,7 @@ describe("WorkoutScreen", () => {
     expect(await screen.findByTestId("rest-screen")).toHaveTextContent(
       "Descanso",
     );
-    expect(screen.getByTestId("rest-timer")).toHaveTextContent("75");
+    expect(screen.getByTestId("rest-timer")).toHaveTextContent("01:15");
     await user.click(screen.getByTestId("rest-skip"));
 
     expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
@@ -196,9 +374,11 @@ describe("WorkoutScreen", () => {
     await user.click(screen.getByTestId("set-continue"));
 
     // A correction goes straight to the next set screen, no rest replay.
-    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
-      "Serie 2 de 4",
-    );
+    await waitFor(() => {
+      expect(screen.getByTestId("set-progress")).toHaveTextContent(
+        "Serie 2 de 4",
+      );
+    });
     expect(screen.queryByTestId("rest-screen")).not.toBeInTheDocument();
 
     const session = await db.activeSession.get("current");
@@ -248,6 +428,47 @@ describe("WorkoutScreen", () => {
 
     // lastUsed is only derived at finishSession time, never mid-session.
     await expect(db.lastUsed.get("leg-press")).resolves.toBeUndefined();
+  });
+
+  it("offers the original exercise after a swap so the change can be reversed", async () => {
+    await seedSession(0);
+    const user = userEvent.setup();
+    renderWorkout();
+
+    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
+      "Sentadilla con barra",
+    );
+    await user.click(screen.getByTestId("set-exercise-select"));
+    await user.click(
+      await screen.findByTestId("set-exercise-option-leg-press"),
+    );
+
+    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
+      "Prensa de piernas",
+    );
+    await user.click(screen.getByTestId("set-exercise-select"));
+    await user.click(
+      await screen.findByTestId("set-exercise-option-back-squat"),
+    );
+
+    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
+      "Sentadilla con barra",
+    );
+    await expect(db.activeSession.get("current")).resolves.toMatchObject({
+      swaps: {},
+    });
+  });
+
+  it("opens exercise instructions in the technique sheet", async () => {
+    await seedSession(0);
+    const user = userEvent.setup();
+    renderWorkout();
+
+    await user.click(await screen.findByTestId("technique-trigger"));
+
+    expect(await screen.findByTestId("technique-sheet")).toHaveTextContent(
+      "Ejecución",
+    );
   });
 
   it("keeps the persisted exercise active while a swap is pending, then retries after an error", async () => {
@@ -360,7 +581,7 @@ describe("WorkoutScreen", () => {
     // timers are faked for the advance below to reach it.
     fireEvent.click(screen.getByTestId("set-start"));
 
-    expect(screen.getByTestId("duration-timer")).toHaveTextContent("45");
+    expect(screen.getByTestId("duration-timer")).toHaveTextContent("00:45");
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(46_000);

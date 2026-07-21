@@ -1,5 +1,6 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEffect } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -64,14 +65,19 @@ export function ResumeSessionPrompt({ onResume }: ResumeSessionPromptProps) {
   }
 
   return (
-    <Card data-test="resume-session-prompt">
-      <CardHeader>
-        <CardTitle>Tienes un entrenamiento en curso</CardTitle>
-        <CardDescription data-test="resume-session-details">
+    <Card data-test="resume-session-prompt" className="gap-0 py-0">
+      <CardHeader className="border-b px-6 py-6">
+        <Badge variant="status" className="mb-2">
+          En curso
+        </Badge>
+        <CardTitle className="text-xl">
+          Tienes un entrenamiento en curso
+        </CardTitle>
+        <CardDescription data-test="resume-session-details" className="mt-1">
           {record.routine.name} — {validDay.name}
         </CardDescription>
       </CardHeader>
-      <CardFooter className="gap-2">
+      <CardFooter className="gap-2 px-6 py-5">
         <Button
           data-test="resume-session-resume"
           className="flex-1"

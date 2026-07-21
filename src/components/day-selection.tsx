@@ -1,16 +1,16 @@
 import { useLiveQuery } from "dexie-react-hooks";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardAction,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { startSession } from "@/lib/session-store";
+import { cn } from "@/lib/utils";
 
 interface DaySelectionProps {
   routineId: string;
@@ -50,24 +50,28 @@ export function DaySelection({
   const nextDayIndex = data.progress?.currentDayIndex ?? 0;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col">
       <Button
         data-test="day-selection-back"
         variant="ghost"
-        className="self-start"
+        size="sm"
+        className="-ml-4 mb-8 self-start"
         aria-label="Volver"
         onClick={onBack}
       >
         <ArrowLeft />
         Volver
       </Button>
+      <Badge variant="secondary" className="mb-3">
+        Seleccionar día
+      </Badge>
       <h2
         data-test="day-selection-routine-name"
-        className="font-heading text-2xl font-bold"
+        className="mb-8 font-heading text-3xl font-semibold leading-tight"
       >
         {record.routine.name}
       </h2>
-      <div className="flex flex-col gap-3">
+      <div className="border-t">
         {record.routine.days.map((day, dayIndex) => {
           const isNextDay = dayIndex === nextDayIndex;
           return (
@@ -75,7 +79,7 @@ export function DaySelection({
               key={day.id}
               data-test={`day-card-${day.id}`}
               type="button"
-              className="rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="block w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
               onClick={() => {
                 startSession(routineId, day.id, dayIndex)
                   .then(() => {
@@ -86,21 +90,37 @@ export function DaySelection({
                   });
               }}
             >
-              <Card className="cursor-pointer transition-colors hover:bg-muted/50">
-                <CardHeader>
-                  <CardTitle data-test={`day-name-${day.id}`}>
-                    {day.name}
-                  </CardTitle>
-                  <CardDescription>
-                    {formatExerciseCount(day.exercises.length)}
-                  </CardDescription>
-                  {isNextDay && (
-                    <CardAction>
-                      <Badge data-test={`day-next-badge-${day.id}`}>
-                        Siguiente
-                      </Badge>
-                    </CardAction>
-                  )}
+              <Card
+                className={cn(
+                  "cursor-pointer border-x-0 border-t-0 py-0 transition-colors hover:bg-accent",
+                  isNextDay && "border-l-2 border-l-primary bg-accent/40",
+                )}
+              >
+                <CardHeader className="grid grid-cols-[1fr_auto] gap-x-4 px-4 py-5">
+                  <div className="min-w-0">
+                    <div className="mb-2 flex items-center gap-3">
+                      <span className="text-[0.625rem] font-semibold tracking-widest text-muted-foreground uppercase">
+                        Día {String(dayIndex + 1).padStart(2, "0")}
+                      </span>
+                      {isNextDay && (
+                        <Badge
+                          data-test={`day-next-badge-${day.id}`}
+                          variant="status"
+                        >
+                          Siguiente
+                        </Badge>
+                      )}
+                    </div>
+                    <CardTitle data-test={`day-name-${day.id}`}>
+                      {day.name}
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      {formatExerciseCount(day.exercises.length)}
+                    </CardDescription>
+                  </div>
+                  <div className="col-start-2 row-start-1 self-center">
+                    <ArrowRight className="size-4 text-primary" />
+                  </div>
                 </CardHeader>
               </Card>
             </button>

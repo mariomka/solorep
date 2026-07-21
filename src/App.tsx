@@ -1,7 +1,6 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEffect, useState } from "react";
 import { DaySelection } from "@/components/day-selection";
-import { ImportRoutineButton } from "@/components/import-routine-button";
 import { ResumeSessionPrompt } from "@/components/resume-session-prompt";
 import { RoutineList } from "@/components/routine-list";
 import { SessionSummary } from "@/components/session-summary";
@@ -77,27 +76,30 @@ function App() {
   return (
     <main
       data-test="app-shell"
-      className="mx-auto flex min-h-svh w-full max-w-md flex-col gap-6 p-4"
+      className="mx-auto flex min-h-svh w-full max-w-md flex-col pt-[max(1.5rem,env(safe-area-inset-top))] pr-[max(1.25rem,env(safe-area-inset-right))] pb-6 pl-[max(1.25rem,env(safe-area-inset-left))]"
     >
       {screen.name === "list" && (
         <>
-          <h1
-            data-test="app-title"
-            className="font-heading text-4xl font-black tracking-[-1px] uppercase"
-          >
-            Solorep
-          </h1>
-          <ResumeSessionPrompt
-            onResume={({ routineId, dayIndex }) => {
-              setScreen({ name: "workout", routineId, dayIndex });
-            }}
-          />
-          <RoutineList
-            onSelectRoutine={(routineId) => {
-              setScreen({ name: "day-selection", routineId });
-            }}
-          />
-          <ImportRoutineButton />
+          <header className="mb-10 border-b pb-5">
+            <h1
+              data-test="app-title"
+              className="font-heading text-4xl font-black tracking-[-1px] uppercase"
+            >
+              Solorep
+            </h1>
+          </header>
+          <div className="flex flex-col gap-8">
+            <ResumeSessionPrompt
+              onResume={({ routineId, dayIndex }) => {
+                setScreen({ name: "workout", routineId, dayIndex });
+              }}
+            />
+            <RoutineList
+              onSelectRoutine={(routineId) => {
+                setScreen({ name: "day-selection", routineId });
+              }}
+            />
+          </div>
         </>
       )}
       {screen.name === "day-selection" && (

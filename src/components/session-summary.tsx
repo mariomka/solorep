@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { computeSummary } from "@/lib/session-plan";
 import {
   discardActiveSession,
@@ -134,39 +134,40 @@ export function SessionSummary({ onFinished }: SessionSummaryProps) {
   };
 
   return (
-    <div data-test="session-summary" className="flex flex-col gap-6">
-      <h2 className="font-heading text-2xl font-bold">Resumen</h2>
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex items-baseline justify-between">
-            <span className="text-muted-foreground">Duración</span>
-            <span
-              data-test="summary-duration"
-              className="font-heading text-2xl font-bold tabular-nums"
-            >
-              {summary.durationText}
-            </span>
-          </div>
-          <div className="flex items-baseline justify-between">
-            <span className="text-muted-foreground">Series completadas</span>
-            <span
-              data-test="summary-sets-completed"
-              className="font-heading text-2xl font-bold tabular-nums"
-            >
-              {summary.setsCompleted}
-            </span>
-          </div>
-          <div className="flex items-baseline justify-between">
-            <span className="text-muted-foreground">Volumen total</span>
-            <span
-              data-test="summary-total-volume"
-              className="font-heading text-2xl font-bold tabular-nums"
-            >
-              {summary.totalVolume} kg
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+    <div data-test="session-summary" className="flex flex-col">
+      <Badge variant="status" className="mb-3 mt-4">
+        Entrenamiento completado
+      </Badge>
+      <h2 className="mb-9 font-heading text-3xl font-semibold">Resumen</h2>
+      <dl className="mb-8 border-t">
+        <div className="flex items-baseline justify-between gap-6 border-b py-5">
+          <dt className="text-sm text-muted-foreground">Duración</dt>
+          <dd
+            data-test="summary-duration"
+            className="font-mono text-2xl font-medium text-primary tabular-nums"
+          >
+            {summary.durationText}
+          </dd>
+        </div>
+        <div className="flex items-baseline justify-between gap-6 border-b py-5">
+          <dt className="text-sm text-muted-foreground">Series completadas</dt>
+          <dd
+            data-test="summary-sets-completed"
+            className="font-mono text-2xl font-medium text-primary tabular-nums"
+          >
+            {summary.setsCompleted}
+          </dd>
+        </div>
+        <div className="flex items-baseline justify-between gap-6 border-b py-5">
+          <dt className="text-sm text-muted-foreground">Volumen total</dt>
+          <dd
+            data-test="summary-total-volume"
+            className="font-mono text-2xl font-medium text-primary tabular-nums"
+          >
+            {summary.totalVolume} kg
+          </dd>
+        </div>
+      </dl>
       {errorMessage !== undefined && (
         <p
           data-test="summary-error"
@@ -176,7 +177,7 @@ export function SessionSummary({ onFinished }: SessionSummaryProps) {
           {errorMessage}
         </p>
       )}
-      <div className="flex gap-2">
+      <div className="mt-6 flex gap-2">
         <Button
           data-test="summary-finish"
           className="flex-1"
