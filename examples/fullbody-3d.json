@@ -1,0 +1,200 @@
+{
+  "id": "fullbody-3d",
+  "name": "Full Body — 3 días",
+  "description": "Rutina full body de tres días con progresión de carga básica.",
+  "exercises": {
+    "back-squat": { "name": "Sentadilla con barra", "media": "0043" },
+    "leg-press": { "name": "Prensa de piernas", "media": "0739" },
+    "bench-press": { "name": "Press banca", "media": "0025" },
+    "dumbbell-bench-press": {
+      "name": "Press banca con mancuernas",
+      "media": "0289"
+    },
+    "barbell-row": { "name": "Remo con barra", "media": "0027" },
+    "cable-seated-row": { "name": "Remo sentado en polea", "media": "0861" },
+    "plank": { "name": "Plancha", "media": "2135" },
+    "deadlift": { "name": "Peso muerto", "media": "0032" },
+    "romanian-deadlift": { "name": "Peso muerto rumano", "media": "0085" },
+    "overhead-press": { "name": "Press militar", "media": "0091" },
+    "dumbbell-shoulder-press": {
+      "name": "Press de hombro con mancuernas",
+      "media": "0405"
+    },
+    "lat-pulldown": { "name": "Jalón al pecho", "media": "0198" },
+    "pull-up": { "name": "Dominadas", "media": "0652" },
+    "biceps-curl": { "name": "Curl de bíceps con mancuernas", "media": "0294" },
+    "triceps-pushdown": {
+      "name": "Extensión de tríceps en polea",
+      "media": "0201"
+    },
+    "front-squat": { "name": "Sentadilla frontal", "media": "0042" },
+    "dumbbell-lunge": { "name": "Zancadas con mancuernas", "media": "0336" },
+    "incline-dumbbell-press": {
+      "name": "Press inclinado con mancuernas",
+      "media": "0314"
+    },
+    "lateral-raise": { "name": "Elevaciones laterales", "media": "0334" },
+    "rear-delt-row": {
+      "name": "Remo para deltoides posterior",
+      "media": "0076"
+    }
+  },
+  "days": [
+    {
+      "id": "day-1",
+      "name": "Full Body A",
+      "exercises": [
+        {
+          "exercise": "back-squat",
+          "alternatives": ["leg-press"],
+          "rest": 120,
+          "sets": [
+            { "reps": 10, "weight": 50 },
+            { "reps": 8, "weight": 60 },
+            { "reps": 8, "weight": 60 },
+            { "reps": 6, "weight": 65 }
+          ]
+        },
+        {
+          "exercise": "bench-press",
+          "alternatives": ["dumbbell-bench-press"],
+          "rest": 90,
+          "sets": [
+            { "reps": 10, "weight": 45 },
+            { "reps": 8, "weight": 50 },
+            { "reps": 8, "weight": 50 },
+            { "reps": 6, "weight": 55 }
+          ]
+        },
+        {
+          "exercise": "barbell-row",
+          "alternatives": ["cable-seated-row"],
+          "rest": 90,
+          "sets": [
+            { "reps": 10, "weight": 40 },
+            { "reps": 10, "weight": 45 },
+            { "reps": 8, "weight": 45 }
+          ]
+        },
+        {
+          "exercise": "plank",
+          "rest": 60,
+          "sets": [{ "duration": 45 }, { "duration": 45 }, { "duration": 60 }]
+        }
+      ]
+    },
+    {
+      "id": "day-2",
+      "name": "Full Body B",
+      "exercises": [
+        {
+          "exercise": "deadlift",
+          "alternatives": ["romanian-deadlift"],
+          "rest": 150,
+          "sets": [
+            { "reps": 8, "weight": 70 },
+            { "reps": 6, "weight": 80 },
+            { "reps": 6, "weight": 80 },
+            { "reps": 4, "weight": 90 }
+          ]
+        },
+        {
+          "exercise": "overhead-press",
+          "alternatives": ["dumbbell-shoulder-press"],
+          "rest": 90,
+          "sets": [
+            { "reps": 10, "weight": 25 },
+            { "reps": 8, "weight": 30 },
+            { "reps": 8, "weight": 30 }
+          ]
+        },
+        {
+          "exercise": "lat-pulldown",
+          "alternatives": ["pull-up"],
+          "rest": 90,
+          "sets": [
+            { "reps": 10, "weight": 50 },
+            { "reps": 10, "weight": 55 },
+            { "reps": 8, "weight": 55 }
+          ]
+        },
+        {
+          "superset": [
+            {
+              "exercise": "biceps-curl",
+              "sets": [
+                { "reps": 12, "weight": 10 },
+                { "reps": 12, "weight": 10 },
+                { "reps": 10, "weight": 12 }
+              ]
+            },
+            {
+              "exercise": "triceps-pushdown",
+              "sets": [
+                { "reps": 12, "weight": 20 },
+                { "reps": 12, "weight": 20 },
+                { "reps": 10, "weight": 25 }
+              ]
+            }
+          ],
+          "rest": 75
+        }
+      ]
+    },
+    {
+      "id": "day-3",
+      "name": "Full Body C",
+      "exercises": [
+        {
+          "exercise": "front-squat",
+          "alternatives": ["dumbbell-lunge"],
+          "rest": 120,
+          "sets": [
+            { "reps": 10, "weight": 40 },
+            { "reps": 8, "weight": 45 },
+            { "reps": 8, "weight": 45 }
+          ]
+        },
+        {
+          "exercise": "incline-dumbbell-press",
+          "rest": 90,
+          "sets": [
+            { "reps": 10, "weight": 16 },
+            { "reps": 10, "weight": 18 },
+            { "reps": 8, "weight": 18 }
+          ]
+        },
+        {
+          "exercise": "cable-seated-row",
+          "rest": 90,
+          "sets": [
+            { "reps": 10, "weight": 45 },
+            { "reps": 10, "weight": 50 },
+            { "reps": 8, "weight": 50 }
+          ]
+        },
+        {
+          "superset": [
+            {
+              "exercise": "lateral-raise",
+              "sets": [
+                { "reps": 15, "weight": 8 },
+                { "reps": 12, "weight": 8 },
+                { "reps": 12, "weight": 8 }
+              ]
+            },
+            {
+              "exercise": "rear-delt-row",
+              "sets": [
+                { "reps": 15, "weight": 20 },
+                { "reps": 12, "weight": 20 },
+                { "reps": 12, "weight": 20 }
+              ]
+            }
+          ],
+          "rest": 75
+        }
+      ]
+    }
+  ]
+}
