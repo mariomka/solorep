@@ -37,6 +37,10 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    host: true,
+    allowedHosts: [".trycloudflare.com", ".ngrok-free.app"],
+  },
   test: {
     environment: "jsdom",
     globals: true,
