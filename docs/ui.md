@@ -12,7 +12,10 @@
 - UI copy in Spanish; code in English.
 - Errors render inline with `role="alert"` -- no toasts, no confirm dialogs (user-decided; don't add libraries for this).
 - Multi-line error text (Zod `prettifyError` output) needs `whitespace-pre-line` or it collapses.
-- Icon-only buttons need `aria-label` (it is also what tests target).
+- Icon-only buttons need `aria-label`. Tests target `data-test`, never accessibility metadata.
+- Every DOM element selected by a test needs a stable `data-test` attribute.
+- Test behavior and state, never Tailwind classes or other CSS implementation details.
+- Implement accessibility, but do not add tests whose only assertion is an accessibility attribute.
 - Hidden file inputs: `sr-only` class + `aria-label`, triggered from a visible Button via ref.
 
 ## Gotchas

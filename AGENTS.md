@@ -30,6 +30,7 @@ Git hooks enforce gates: pre-commit runs Biome on staged files, pre-push runs te
 - `SCHEMA.md` -- Routine JSON contract and semantics
 - `docs/data-layer.md` -- Dexie tables, import/delete semantics, liveQuery rules
 - `docs/ui.md` -- Component conventions, shadcn usage, error display
+- `docs/design.md` -- Visual direction, hierarchy, interaction patterns, design decisions
 - `docs/testing.md` -- fake-indexeddb resets, flake traps, e2e setup
 - `docs/timers.md` -- Countdown feedback, audio, vibration, Wake Lock lifecycle
 - `docs/pwa.md` -- Manifest, service worker, offline behavior, media caching
