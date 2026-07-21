@@ -20,10 +20,18 @@ const step: WorkoutStep = {
   restAfterSeconds: null,
 };
 
-function renderSetScreen(onComplete: (values: unknown) => Promise<void>) {
+const durationStep: WorkoutStep = {
+  ...step,
+  plannedSet: { duration: 30 },
+};
+
+function renderSetScreen(
+  onComplete: (values: unknown) => Promise<void>,
+  workoutStep: WorkoutStep = step,
+) {
   render(
     <SetScreen
-      step={step}
+      step={workoutStep}
       exerciseCatalog={exerciseCatalog}
       effectiveExerciseKey="bench-press"
       setNumber={1}
@@ -76,5 +84,27 @@ describe("SetScreen", () => {
     fireEvent.error(gif);
 
     expect(screen.queryByTestId("set-exercise-gif")).not.toBeInTheDocument();
+  });
+
+  it("replaces exercise content with a compact duration countdown", async () => {
+    const user = userEvent.setup();
+    renderSetScreen(
+      vi.fn(async () => {}),
+      durationStep,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("set-duration-input")).toHaveValue("30");
+    });
+    expect(await screen.findByTestId("set-exercise-gif")).toBeInTheDocument();
+
+    await user.click(screen.getByTestId("set-start"));
+
+    expect(screen.getByTestId("duration-countdown-screen")).toBeInTheDocument();
+    expect(screen.getByTestId("duration-timer")).toHaveTextContent("00:30");
+    expect(screen.queryByTestId("set-exercise-gif")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("technique-trigger")).not.toBeInTheDocument();
+    expect(screen.getByTestId("set-previous")).toBeInTheDocument();
+    expect(screen.getByTestId("duration-skip")).toBeInTheDocument();
   });
 });

@@ -65,7 +65,13 @@ test("completes a full session and advances the day pointer", async ({
   // Duration set: start the countdown, then skip it.
   await expect(exerciseName).toBeVisible();
   await expect(exerciseName).toHaveText("Plancha");
+  await page.setViewportSize({ width: 345, height: 713 });
   await page.getByTestId("set-start").click();
+  await expect(page.getByTestId("duration-countdown-screen")).toBeVisible();
+  const hasVerticalScroll = await page.evaluate(
+    () => document.documentElement.scrollHeight > window.innerHeight,
+  );
+  expect(hasVerticalScroll).toBe(false);
   await page.getByTestId("duration-skip").click();
 
   // Summary: 5 sets. lastUsed is only written at finishSession, so every
