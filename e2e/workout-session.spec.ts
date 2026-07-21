@@ -32,6 +32,11 @@ test("completes a full session and advances the day pointer", async ({
   await expect(dayBCard).not.toContainText("Siguiente");
 
   await dayACard.click();
+  const dayOverview = page.getByTestId("day-overview");
+  await expect(dayOverview).toBeVisible();
+  await expect(dayOverview).toContainText("Press banca");
+  await expect(dayOverview).toContainText("Curl de bíceps");
+  await page.getByTestId("day-overview-start").click();
 
   // Bench press set 1 of 2, then a rest screen (skipped deterministically).
   const exerciseName = page.getByTestId("set-exercise-name");
@@ -116,6 +121,7 @@ test("resumes an in-progress session after a reload and discards it", async ({
 
   await page.getByTestId(`routine-card-${routineId}`).click();
   await page.getByTestId(`day-card-${dayAId}`).click();
+  await page.getByTestId("day-overview-start").click();
 
   // Complete only the first set; the rest screen appearing guarantees the
   // completion was persisted before the reload.

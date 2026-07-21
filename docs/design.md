@@ -105,6 +105,14 @@ Do not invent different list behavior for each screen.
 - Mark the next day with a restrained status badge, primary left rule, and light accent wash.
 - Do not turn the recommended day into a large primary button.
 
+### Day overview
+
+- Selecting a day opens its overview without creating an active session.
+- Show one compact row per scheduled exercise, including every superset member, in execution order.
+- Include the exercise thumbnail when dataset media exists; do not render an empty placeholder when it does not.
+- Keep prescriptions compact: series plus planned repetitions or duration.
+- Place the single primary `Empezar entrenamiento` action after the exercise list. Starting is the point that creates the active session.
+
 ### Workout execution
 
 - Keep the day, exercise name, set count, and overall progress at the top.

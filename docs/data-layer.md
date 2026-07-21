@@ -5,6 +5,7 @@
 - `src/lib/db.ts` -- Dexie subclass + record interfaces, no business logic. `src/lib/routine-store.ts` (import/delete) and `src/lib/session-store.ts` (active session lifecycle) -- all mutations, one transaction per operation.
 - Tables: `routines` (pk `id`, index `importedAt`), `progress` (pk `routineId`), `lastUsed` (pk `exerciseKey`), `sessions` (`++id`, indexes `routineId`, `finishedAt`), `activeSession` (pk `id`).
 - `activeSession` is a singleton: its only row always has id `"current"` -- one active session app-wide. `startSession` overwrites it, `finishSession` archives it into `sessions` (dropping execution-only identity fields), advances `progress` with wraparound, and deletes it.
+- Day selection and the day overview are read-only. `startSession` runs only from the overview's `Empezar entrenamiento` action, so navigating back never leaves a resumable session behind.
 - `lastUsed` and `sessions` are keyed by exercise key and GLOBAL across routines -- they intentionally survive routine deletion.
 - `lastUsed.sets` is an array indexed by set number; the set screen overlays these over routine-suggested values (`resolvePrefill` in `src/lib/session-plan.ts`), extra sets fall back to the last known value.
 - Validation (Zod `routineSchema` in `src/lib/routine-schema.ts`) happens before any DB write; error paths must leave the DB untouched.

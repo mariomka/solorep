@@ -9,13 +9,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { db } from "@/lib/db";
-import { startSession } from "@/lib/session-store";
-import { prepareTimerAudio } from "@/lib/timer-feedback";
 import { cn } from "@/lib/utils";
 
 interface DaySelectionProps {
   routineId: string;
-  onStartDay: (dayIndex: number) => void;
+  onSelectDay: (dayIndex: number) => void;
   onBack: () => void;
 }
 
@@ -26,7 +24,7 @@ function formatExerciseCount(exerciseCount: number): string {
 
 export function DaySelection({
   routineId,
-  onStartDay,
+  onSelectDay,
   onBack,
 }: DaySelectionProps) {
   const data = useLiveQuery(async () => {
@@ -81,18 +79,7 @@ export function DaySelection({
               data-test={`day-card-${day.id}`}
               type="button"
               className="block w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              onClick={() => {
-                prepareTimerAudio().catch((error: unknown) => {
-                  console.error("Failed to prepare timer audio", error);
-                });
-                startSession(routineId, day.id, dayIndex)
-                  .then(() => {
-                    onStartDay(dayIndex);
-                  })
-                  .catch((error: unknown) => {
-                    console.error("Failed to start session", error);
-                  });
-              }}
+              onClick={() => onSelectDay(dayIndex)}
             >
               <Card
                 className={cn(

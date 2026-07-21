@@ -81,7 +81,7 @@ describe("App", () => {
     );
   });
 
-  it("navigates to the workout screen when tapping a day", async () => {
+  it("reviews the selected day before starting the workout", async () => {
     const user = userEvent.setup();
     render(<App />);
 
@@ -93,6 +93,13 @@ describe("App", () => {
 
     const dayCard = await screen.findByTestId("day-card-day-1");
     await user.click(dayCard);
+
+    expect(await screen.findByTestId("day-overview-name")).toHaveTextContent(
+      "Full Body A",
+    );
+    await expect(db.activeSession.get("current")).resolves.toBeUndefined();
+
+    await user.click(screen.getByTestId("day-overview-start"));
 
     expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
       "Sentadilla con barra",
@@ -111,6 +118,7 @@ describe("App", () => {
 
     await user.click(await screen.findByTestId("routine-card-mini"));
     await user.click(await screen.findByTestId("day-card-day-1"));
+    await user.click(await screen.findByTestId("day-overview-start"));
 
     // Set 1 of 2.
     expect(await screen.findByTestId("set-progress")).toHaveTextContent(

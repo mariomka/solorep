@@ -1,14 +1,11 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/lib/db";
 import { parseRoutine } from "@/lib/routine-schema";
-import { prepareTimerAudio } from "@/lib/timer-feedback";
 import { clearDatabase } from "@/test/helpers";
 import fullbody3d from "../../examples/fullbody-3d.json";
 import { DaySelection } from "./day-selection";
-
-vi.mock("@/lib/timer-feedback", { spy: true });
 
 const routine = parseRoutine(fullbody3d);
 
@@ -16,10 +13,7 @@ async function seedRoutine(): Promise<void> {
   await db.routines.put({ id: routine.id, routine, importedAt: Date.now() });
 }
 
-beforeEach(async () => {
-  vi.clearAllMocks();
-  await clearDatabase();
-});
+beforeEach(clearDatabase);
 
 describe("DaySelection", () => {
   it("renders the routine name and every day", async () => {
@@ -28,7 +22,7 @@ describe("DaySelection", () => {
     render(
       <DaySelection
         routineId={routine.id}
-        onStartDay={vi.fn()}
+        onSelectDay={vi.fn()}
         onBack={vi.fn()}
       />,
     );
@@ -54,7 +48,7 @@ describe("DaySelection", () => {
     render(
       <DaySelection
         routineId={routine.id}
-        onStartDay={vi.fn()}
+        onSelectDay={vi.fn()}
         onBack={vi.fn()}
       />,
     );
@@ -76,7 +70,7 @@ describe("DaySelection", () => {
     render(
       <DaySelection
         routineId={routine.id}
-        onStartDay={vi.fn()}
+        onSelectDay={vi.fn()}
         onBack={vi.fn()}
       />,
     );
@@ -92,15 +86,15 @@ describe("DaySelection", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("starts a session and calls onStartDay when tapping a day", async () => {
+  it("selects a day without starting a session", async () => {
     await seedRoutine();
 
-    const onStartDay = vi.fn();
+    const onSelectDay = vi.fn();
     const user = userEvent.setup();
     render(
       <DaySelection
         routineId={routine.id}
-        onStartDay={onStartDay}
+        onSelectDay={onSelectDay}
         onBack={vi.fn()}
       />,
     );
@@ -108,16 +102,8 @@ describe("DaySelection", () => {
     const dayThreeCard = await screen.findByTestId("day-card-day-3");
     await user.click(dayThreeCard);
 
-    await waitFor(() => {
-      expect(onStartDay).toHaveBeenCalledExactlyOnceWith(2);
-    });
-    expect(prepareTimerAudio).toHaveBeenCalledTimes(1);
-    const session = await db.activeSession.get("current");
-    expect(session).toMatchObject({
-      routineId: routine.id,
-      dayId: "day-3",
-      dayIndex: 2,
-    });
+    expect(onSelectDay).toHaveBeenCalledExactlyOnceWith(2);
+    await expect(db.activeSession.get("current")).resolves.toBeUndefined();
   });
 
   it("calls onBack when tapping the back button", async () => {
@@ -128,7 +114,7 @@ describe("DaySelection", () => {
     render(
       <DaySelection
         routineId={routine.id}
-        onStartDay={vi.fn()}
+        onSelectDay={vi.fn()}
         onBack={onBack}
       />,
     );

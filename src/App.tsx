@@ -1,5 +1,6 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEffect, useState } from "react";
+import { DayOverview } from "@/components/day-overview";
 import { DaySelection } from "@/components/day-selection";
 import { ResumeSessionPrompt } from "@/components/resume-session-prompt";
 import { RoutineList } from "@/components/routine-list";
@@ -10,6 +11,7 @@ import { db, type RoutineRecord } from "@/lib/db";
 type Screen =
   | { name: "list" }
   | { name: "day-selection"; routineId: string }
+  | { name: "day-overview"; routineId: string; dayIndex: number }
   | { name: "workout"; routineId: string; dayIndex: number }
   | { name: "summary" };
 
@@ -105,15 +107,34 @@ function App() {
       {screen.name === "day-selection" && (
         <DaySelection
           routineId={screen.routineId}
-          onStartDay={(dayIndex) => {
+          onSelectDay={(dayIndex) => {
             setScreen({
-              name: "workout",
+              name: "day-overview",
               routineId: screen.routineId,
               dayIndex,
             });
           }}
           onBack={() => {
             setScreen({ name: "list" });
+          }}
+        />
+      )}
+      {screen.name === "day-overview" && (
+        <DayOverview
+          routineId={screen.routineId}
+          dayIndex={screen.dayIndex}
+          onStart={() => {
+            setScreen({
+              name: "workout",
+              routineId: screen.routineId,
+              dayIndex: screen.dayIndex,
+            });
+          }}
+          onBack={() => {
+            setScreen({
+              name: "day-selection",
+              routineId: screen.routineId,
+            });
           }}
         />
       )}
