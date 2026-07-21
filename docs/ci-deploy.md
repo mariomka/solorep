@@ -4,7 +4,7 @@
 
 - `.github/workflows/deploy.yml`: push to main -> lint -> unit tests -> e2e -> Pages build -> GitHub Pages deploy (source "GitHub Actions").
 - The Pages build passes `--base=/<repo-name>/` through `bun run build --` so asset URLs work under the Pages subpath.
-- PWA via vite-plugin-pwa: autoUpdate registration, precache. Manifest icons are placeholder black squares (real icon pending).
+- PWA via vite-plugin-pwa: autoUpdate registration, precache, and generated `site.webmanifest`. Favicons and install icons live in `public/`.
 
 ## Gotchas
 

@@ -11,22 +11,26 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: "autoUpdate",
+      manifestFilename: "site.webmanifest",
       manifest: {
         name: "Solorep",
         short_name: "Solorep",
-        description: "Gym workout companion",
+        description: "Compañero de entrenamiento en el gimnasio",
+        lang: "es",
         display: "standalone",
         orientation: "portrait",
-        theme_color: "#0a0a0a",
-        background_color: "#0a0a0a",
+        theme_color: "#ffffff",
+        background_color: "#ffffff",
         icons: [
-          { src: "pwa-192.png", sizes: "192x192", type: "image/png" },
-          { src: "pwa-512.png", sizes: "512x512", type: "image/png" },
           {
-            src: "pwa-512.png",
+            src: "web-app-manifest-192x192.png",
+            sizes: "192x192",
+            type: "image/png",
+          },
+          {
+            src: "web-app-manifest-512x512.png",
             sizes: "512x512",
             type: "image/png",
-            purpose: "maskable",
           },
         ],
       },
