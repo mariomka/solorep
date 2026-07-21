@@ -1,0 +1,54 @@
+{
+  "id": "mini-session",
+  "name": "Mini sesión",
+  "description": "Rutina mínima para probar todos los flujos de sesión rápidamente.",
+  "exercises": {
+    "bench-press": { "name": "Press banca", "datasetId": "0025" },
+    "biceps-curl": { "name": "Curl de bíceps" },
+    "triceps-pushdown": { "name": "Extensión de tríceps" },
+    "plank": { "name": "Plancha" },
+    "goblet-squat": { "name": "Sentadilla goblet" }
+  },
+  "days": [
+    {
+      "id": "day-a",
+      "name": "Día A",
+      "exercises": [
+        {
+          "exercise": "bench-press",
+          "rest": 3,
+          "sets": [{ "reps": 10, "weight": 20 }, { "reps": 8, "weight": 22.5 }]
+        },
+        {
+          "superset": [
+            {
+              "exercise": "biceps-curl",
+              "sets": [{ "reps": 12, "weight": 10 }]
+            },
+            {
+              "exercise": "triceps-pushdown",
+              "sets": [{ "reps": 12, "weight": 20 }]
+            }
+          ],
+          "rest": 3
+        },
+        {
+          "exercise": "plank",
+          "rest": 3,
+          "sets": [{ "duration": 2 }]
+        }
+      ]
+    },
+    {
+      "id": "day-b",
+      "name": "Día B",
+      "exercises": [
+        {
+          "exercise": "goblet-squat",
+          "rest": 3,
+          "sets": [{ "reps": 10, "weight": 12 }]
+        }
+      ]
+    }
+  ]
+}

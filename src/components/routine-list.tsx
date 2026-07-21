@@ -11,12 +11,16 @@ import {
 import { db } from "@/lib/db";
 import { deleteRoutine } from "@/lib/routine-store";
 
+interface RoutineListProps {
+  onSelectRoutine: (routineId: string) => void;
+}
+
 function formatDayCount(dayCount: number): string {
   const isSingular = dayCount === 1;
   return isSingular ? "1 día" : `${dayCount} días`;
 }
 
-export function RoutineList() {
+export function RoutineList({ onSelectRoutine }: RoutineListProps) {
   const routines = useLiveQuery(() =>
     db.routines.orderBy("importedAt").toArray(),
   );
@@ -36,7 +40,24 @@ export function RoutineList() {
   return (
     <div className="flex flex-col gap-3">
       {routines.map((record) => (
-        <Card key={record.id}>
+        <Card
+          key={record.id}
+          role="button"
+          tabIndex={0}
+          aria-label={`Entrenar ${record.routine.name}`}
+          className="cursor-pointer transition-colors outline-none hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring"
+          onClick={() => {
+            onSelectRoutine(record.id);
+          }}
+          onKeyDown={(event) => {
+            const isActivationKey = event.key === "Enter" || event.key === " ";
+            const isCardItself = event.target === event.currentTarget;
+            if (isActivationKey && isCardItself) {
+              event.preventDefault();
+              onSelectRoutine(record.id);
+            }
+          }}
+        >
           <CardHeader>
             <CardTitle>{record.routine.name}</CardTitle>
             <CardDescription>
@@ -47,7 +68,8 @@ export function RoutineList() {
                 variant="destructive"
                 size="icon-sm"
                 aria-label={`Eliminar ${record.routine.name}`}
-                onClick={() => {
+                onClick={(event) => {
+                  event.stopPropagation();
                   deleteRoutine(record.id).catch((error: unknown) => {
                     console.error("Failed to delete routine", error);
                   });
