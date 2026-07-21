@@ -108,7 +108,9 @@ describe("SetScreen", () => {
     expect(screen.queryByTestId("set-duration-input")).not.toBeInTheDocument();
     expect(screen.queryByTestId("set-start")).not.toBeInTheDocument();
     expect(screen.queryByTestId("set-exercise-gif")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("set-exercise-note")).not.toBeInTheDocument();
+    expect(screen.getByTestId("set-exercise-note")).toHaveTextContent(
+      "Mantén las escápulas retraídas durante toda la serie.",
+    );
     expect(screen.queryByTestId("technique-trigger")).not.toBeInTheDocument();
     expect(screen.getByTestId("set-previous")).toBeInTheDocument();
     const pauseButton = screen.getByTestId("duration-pause");

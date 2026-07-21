@@ -82,7 +82,8 @@ The contract between routine-authoring agents and the app. Validated with Zod on
   are stored per key, shared across routines and days.
 - **Exercise note** (`note`) is optional catalog copy for a short execution cue or
   routine-specific reminder. It is limited to 200 characters and appears below the
-  exercise GIF; it remains visible when no media is available.
+  exercise GIF; it remains visible when no media is available and while a timed set's
+  countdown is running.
 - **Set**: either `{ reps, weight? }` or `{ duration, weight? }` — never both `reps`
   and `duration`. `weight` optional (bodyweight). Always an array, one entry per set —
   explicit, supports pyramids, and verbosity is free when agents author the JSON.

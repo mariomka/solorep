@@ -91,6 +91,7 @@ function parseWeight(rawValue: string): { isValid: boolean; weight?: number } {
 
 interface DurationCountdownProps {
   seconds: number;
+  note: string | undefined;
   isFirstStep: boolean;
   onFinished: () => void;
   onPrevious: () => void;
@@ -98,6 +99,7 @@ interface DurationCountdownProps {
 
 function DurationCountdown({
   seconds,
+  note,
   isFirstStep,
   onFinished,
   onPrevious,
@@ -140,6 +142,14 @@ function DurationCountdown({
       data-test="duration-countdown-screen"
       className="flex min-h-0 flex-1 flex-col"
     >
+      {note !== undefined && (
+        <p
+          data-test="set-exercise-note"
+          className="mb-4 shrink-0 text-sm leading-relaxed text-muted-foreground"
+        >
+          {note}
+        </p>
+      )}
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center border-b py-6">
         <p className="mb-4 text-[0.625rem] font-semibold tracking-widest text-muted-foreground uppercase">
           Temporizador
@@ -551,6 +561,7 @@ export function SetScreen({
       {isDurationCountdownVisible && (
         <DurationCountdown
           seconds={parsedDuration}
+          note={exerciseNote}
           isFirstStep={isFirstStep}
           onFinished={handleDurationFinished}
           onPrevious={onPrevious}

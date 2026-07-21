@@ -72,6 +72,9 @@ test("completes a full session and advances the day pointer", async ({
   await expect(exerciseName).toHaveText("Plancha");
   await page.setViewportSize({ width: 345, height: 713 });
   await expect(page.getByTestId("duration-countdown-screen")).toBeVisible();
+  await expect(page.getByTestId("set-exercise-note")).toContainText(
+    "Aprieta abdomen y glúteos",
+  );
   const hasVerticalScroll = await page.evaluate(
     () => document.documentElement.scrollHeight > window.innerHeight,
   );

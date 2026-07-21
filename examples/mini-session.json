@@ -6,7 +6,10 @@
     "bench-press": { "name": "Press banca", "datasetId": "0025" },
     "biceps-curl": { "name": "Curl de bíceps" },
     "triceps-pushdown": { "name": "Extensión de tríceps" },
-    "plank": { "name": "Plancha" },
+    "plank": {
+      "name": "Plancha",
+      "note": "Aprieta abdomen y glúteos; mantén el cuerpo en línea recta."
+    },
     "goblet-squat": { "name": "Sentadilla goblet" }
   },
   "days": [
