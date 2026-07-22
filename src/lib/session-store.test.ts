@@ -4,6 +4,7 @@ import fullbody3d from "../../examples/fullbody-3d.json";
 import { db } from "./db";
 import { parseRoutine } from "./routine-schema";
 import {
+  clearRest,
   discardActiveSession,
   finishSession,
   getActiveSession,
@@ -137,6 +138,68 @@ describe("recordSetCompletion", () => {
       updatedAt: 123,
     });
     await expect(db.lastUsed.get("bench-press")).resolves.toBeUndefined();
+  });
+
+  it("stores the rest deadline and drops it on a completion without one", async () => {
+    await startSession("fullbody-3d", "day-1", 0);
+
+    await recordSetCompletion({
+      stepIndex: 0,
+      ...completionIdentity("back-squat"),
+      exerciseKey: "back-squat",
+      setIndex: 0,
+      reps: 10,
+      restEndsAt: 1_234_567,
+    });
+
+    const resting = await getActiveSession();
+    expect(resting?.restEndsAt).toBe(1_234_567);
+
+    await recordSetCompletion({
+      stepIndex: 1,
+      ...completionIdentity("back-squat"),
+      exerciseKey: "back-squat",
+      setIndex: 1,
+      reps: 8,
+    });
+
+    const afterSecond = await getActiveSession();
+    expect(afterSecond).toBeDefined();
+    expect(afterSecond !== undefined && "restEndsAt" in afterSecond).toBe(
+      false,
+    );
+  });
+});
+
+describe("clearRest", () => {
+  it("removes only the rest deadline", async () => {
+    await startSession("fullbody-3d", "day-1", 0);
+    await recordSetCompletion({
+      stepIndex: 0,
+      ...completionIdentity("back-squat"),
+      exerciseKey: "back-squat",
+      setIndex: 0,
+      reps: 10,
+      restEndsAt: 1_234_567,
+    });
+
+    await clearRest();
+
+    const session = await getActiveSession();
+    expect(session).toBeDefined();
+    expect(session !== undefined && "restEndsAt" in session).toBe(false);
+    expect(session?.completed).toHaveLength(1);
+    expect(session?.currentStepIndex).toBe(1);
+  });
+
+  it("is a no-op without a session or without a deadline", async () => {
+    await expect(clearRest()).resolves.toBeUndefined();
+
+    await startSession("fullbody-3d", "day-1", 0);
+    const before = await getActiveSession();
+    await clearRest();
+    const after = await getActiveSession();
+    expect(after).toEqual(before);
   });
 });
 

@@ -41,6 +41,7 @@ export interface ActiveSessionRecord {
   dayIndex: number;
   startedAt: number;
   currentStepIndex: number;
+  restEndsAt?: number; // epoch ms deadline of the running rest; absent outside rest
   swaps: Record<string, string>; // "itemIndex:memberIndex" -> alternative exercise key
   completed: Array<{
     stepIndex: number;

@@ -14,6 +14,9 @@ export interface SetCompletionInput extends SetValues {
   primaryExerciseKey: string;
   exerciseKey: string;
   setIndex: number;
+  // Epoch ms deadline of the rest that follows this completion; omitted when
+  // no rest follows (correction, last set of an item).
+  restEndsAt?: number;
 }
 
 function extractSetValues(source: SetValues): SetValues {
@@ -104,11 +107,38 @@ export async function recordSetCompletion(
       completed.push(entry);
     }
 
-    await db.activeSession.put({
-      ...session,
+    // A completion either starts a new rest or invalidates the previous one,
+    // so the stale deadline never survives the write.
+    const { restEndsAt: _staleRestEndsAt, ...sessionWithoutRest } = session;
+    const nextSession: ActiveSessionRecord = {
+      ...sessionWithoutRest,
       completed,
       currentStepIndex: Math.max(session.currentStepIndex, input.stepIndex + 1),
       updatedAt: now,
+    };
+    const startsRest = input.restEndsAt !== undefined;
+    if (startsRest) {
+      nextSession.restEndsAt = input.restEndsAt;
+    }
+    await db.activeSession.put(nextSession);
+  });
+}
+
+export async function clearRest(): Promise<void> {
+  await db.transaction("rw", db.activeSession, async () => {
+    const session = await db.activeSession.get(ACTIVE_SESSION_ID);
+    if (session === undefined) {
+      return;
+    }
+    const hasPersistedRest = session.restEndsAt !== undefined;
+    if (!hasPersistedRest) {
+      return;
+    }
+
+    const { restEndsAt: _restEndsAt, ...sessionWithoutRest } = session;
+    await db.activeSession.put({
+      ...sessionWithoutRest,
+      updatedAt: Date.now(),
     });
   });
 }

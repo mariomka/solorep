@@ -40,6 +40,7 @@ Keep `useCountdown` free of sound and platform APIs. Timing is required behavior
 - Vibration requires prior user activation and is not supported by every browser.
 - Screen Wake Lock requires a visible secure document. The platform may release it when the page is hidden or the device is under power pressure; the manager reacquires it on a later visible state.
 - If execution is suspended despite Wake Lock, the wall-clock countdown catches up on return. Missed 5–1 cues are not replayed.
+- If the OS kills the PWA outright, rest countdowns survive via `activeSession.restEndsAt` (see `docs/data-layer.md`): resuming re-enters the remaining rest. Duration sets do NOT persist a deadline — an interrupted duration set restarts, because the hold itself was interrupted.
 
 References: [Web Audio best practices](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Best_practices), [Audio Session API](https://developer.mozilla.org/en-US/docs/Web/API/Audio_Session_API), [Vibration API](https://developer.mozilla.org/en-US/docs/Web/API/Vibration_API), [Screen Wake Lock API](https://developer.mozilla.org/en-US/docs/Web/API/Screen_Wake_Lock_API).
 

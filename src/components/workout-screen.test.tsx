@@ -348,6 +348,54 @@ describe("WorkoutScreen", () => {
     );
   });
 
+  it("persists the rest deadline on completion and clears it when the rest ends", async () => {
+    await seedSession(0);
+    const user = userEvent.setup();
+    renderWorkout();
+
+    const repsInput = await screen.findByTestId("set-reps-input");
+    await waitFor(() => expect(repsInput).toHaveValue("10"));
+    const completedAt = Date.now();
+    await user.click(screen.getByTestId("set-continue"));
+
+    await screen.findByTestId("rest-screen");
+    const resting = await db.activeSession.get("current");
+    // Back-squat rest is 120 s.
+    expect(resting?.restEndsAt).toBeGreaterThan(completedAt);
+    expect(resting?.restEndsAt).toBeLessThanOrEqual(Date.now() + 120_000);
+
+    await user.click(screen.getByTestId("rest-skip"));
+    await screen.findByTestId("set-progress");
+    await waitFor(async () => {
+      const rested = await db.activeSession.get("current");
+      expect(rested?.restEndsAt).toBeUndefined();
+    });
+  });
+
+  it("resumes into the remaining rest when a persisted deadline is still running", async () => {
+    await seedSession(0, 1);
+    await db.activeSession.update("current", {
+      restEndsAt: Date.now() + 65_000,
+    });
+    renderWorkout();
+
+    await screen.findByTestId("rest-screen");
+    expect(screen.getByTestId("rest-timer")).toHaveTextContent(/01:0[0-5]/);
+  });
+
+  it("resumes straight into the set when the persisted rest already elapsed", async () => {
+    await seedSession(0, 1);
+    await db.activeSession.update("current", {
+      restEndsAt: Date.now() - 1_000,
+    });
+    renderWorkout();
+
+    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
+      "Serie 2 de 4",
+    );
+    expect(screen.queryByTestId("rest-screen")).not.toBeInTheDocument();
+  });
+
   it("alternates superset members without rest and rests after the round", async () => {
     // Day 2: deadlift (4) + overhead-press (3) + lat-pulldown (3) = step 10
     // starts the biceps/triceps superset.

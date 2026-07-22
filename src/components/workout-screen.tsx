@@ -23,6 +23,7 @@ import {
   type WorkoutStep,
 } from "@/lib/session-plan";
 import {
+  clearRest,
   getActiveSession,
   recordSetCompletion,
   recordSwap,
@@ -115,10 +116,18 @@ function initWorkoutState(session: ActiveSessionRecord): WorkoutState {
     completed[entry.stepIndex] = entry;
   }
 
+  // A persisted rest deadline survives a PWA kill/reload: resume into the
+  // remaining rest, or straight into the set when it already elapsed.
+  const restRemainingMilliseconds =
+    session.restEndsAt === undefined ? 0 : session.restEndsAt - Date.now();
+  const isRestPending = restRemainingMilliseconds > 0;
+
   return {
     stepIndex: session.currentStepIndex,
-    phase: "set",
-    restSeconds: 0,
+    phase: isRestPending ? "rest" : "set",
+    restSeconds: isRestPending
+      ? Math.ceil(restRemainingMilliseconds / 1000)
+      : 0,
     frontier: session.currentStepIndex,
     swaps: session.swaps,
     completed,
@@ -261,12 +270,22 @@ function WorkoutSessionView({
 
   const handleSetCompleted = async (values: LoggedSetValues) => {
     const completedStepIndex = state.stepIndex;
+    // Mirrors the reducer's rest decision so the persisted deadline matches
+    // the rest screen the user is about to see.
+    const restAfterSeconds = step.restAfterSeconds;
+    const isCorrection = completedStepIndex < state.frontier;
+    const startsRest =
+      !isCorrection && restAfterSeconds !== null && restAfterSeconds > 0;
+    const restEndsAt = startsRest
+      ? Date.now() + restAfterSeconds * 1000
+      : undefined;
     await recordSetCompletion({
       stepIndex: completedStepIndex,
       slotKey,
       primaryExerciseKey: step.primaryExerciseKey,
       exerciseKey: effectiveExerciseKey,
       setIndex: step.setIndex,
+      restEndsAt,
       ...values,
     });
 
@@ -296,13 +315,17 @@ function WorkoutSessionView({
     dispatch({ type: "swapChanged", slotKey, alternativeKey });
   };
 
+  const handleRestFinished = () => {
+    dispatch({ type: "restFinished" });
+    clearRest().catch((error: unknown) => {
+      console.error("Failed to clear the persisted rest deadline", error);
+    });
+  };
+
   const isResting = state.phase === "rest";
   if (isResting) {
     return (
-      <RestScreen
-        seconds={state.restSeconds}
-        onFinished={() => dispatch({ type: "restFinished" })}
-      />
+      <RestScreen seconds={state.restSeconds} onFinished={handleRestFinished} />
     );
   }
 
