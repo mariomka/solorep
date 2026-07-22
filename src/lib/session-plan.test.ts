@@ -309,6 +309,64 @@ describe("resolvePrefill", () => {
     expect(prefill).toEqual({ reps: 15 });
     expect("weight" in prefill).toBe(false);
   });
+
+  describe("with a session precedent", () => {
+    const plannedFirstSet = { reps: 10, weight: 50 };
+
+    it("carries a deviated weight over to the next set", () => {
+      const prefill = resolvePrefill({ reps: 8, weight: 60 }, undefined, 1, {
+        plannedSet: plannedFirstSet,
+        setIndex: 0,
+        weight: 55,
+      });
+
+      expect(prefill).toEqual({ reps: 8, weight: 55 });
+    });
+
+    it("keeps the planned progression when the prefilled weight was confirmed", () => {
+      const prefill = resolvePrefill({ reps: 8, weight: 60 }, undefined, 1, {
+        plannedSet: plannedFirstSet,
+        setIndex: 0,
+        weight: 50,
+      });
+
+      expect(prefill).toEqual({ reps: 8, weight: 60 });
+    });
+
+    it("judges deviation against the last-used baseline, not the plan", () => {
+      const lastUsedSets = [
+        { reps: 10, weight: 52.5 },
+        { reps: 8, weight: 55 },
+      ];
+
+      const confirmed = resolvePrefill(
+        { reps: 8, weight: 60 },
+        lastUsedSets,
+        1,
+        { plannedSet: plannedFirstSet, setIndex: 0, weight: 52.5 },
+      );
+      expect(confirmed).toEqual({ reps: 8, weight: 55 });
+
+      const deviated = resolvePrefill(
+        { reps: 8, weight: 60 },
+        lastUsedSets,
+        1,
+        { plannedSet: plannedFirstSet, setIndex: 0, weight: 57.5 },
+      );
+      expect(deviated).toEqual({ reps: 8, weight: 57.5 });
+    });
+
+    it("carries a removed weight over as bodyweight", () => {
+      const prefill = resolvePrefill({ reps: 8, weight: 60 }, undefined, 1, {
+        plannedSet: plannedFirstSet,
+        setIndex: 0,
+        weight: undefined,
+      });
+
+      expect(prefill).toEqual({ reps: 8 });
+      expect("weight" in prefill).toBe(false);
+    });
+  });
 });
 
 describe("computeSummary", () => {

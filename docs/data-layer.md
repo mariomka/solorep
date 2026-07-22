@@ -7,7 +7,7 @@
 - `activeSession` is a singleton: its only row always has id `"current"` -- one active session app-wide. `startSession` overwrites it, `finishSession` archives it into `sessions` (dropping execution-only identity fields), advances `progress` with wraparound, and deletes it.
 - Day selection and the day overview are read-only. `startSession` runs only from the overview's `Empezar entrenamiento` action, so navigating back never leaves a resumable session behind.
 - `lastUsed` and `sessions` are keyed by exercise key and GLOBAL across routines -- they intentionally survive routine deletion.
-- `lastUsed.sets` is an array indexed by set number; the set screen overlays these over routine-suggested values (`resolvePrefill` in `src/lib/session-plan.ts`), extra sets fall back to the last known value.
+- `lastUsed.sets` is an array indexed by set number; the set screen overlays these over routine-suggested values (`resolvePrefill` in `src/lib/session-plan.ts`), extra sets fall back to the last known value. Within a session, a logged weight that deviates from its own prefill carries over to the exercise's later sets (session precedent); a confirmed prefill does not, so planned/lastUsed per-set progressions survive.
 - Validation (Zod `routineSchema` in `src/lib/routine-schema.ts`) happens before any DB write; error paths must leave the DB untouched.
 
 ## Key Conventions (user-decided, do not relitigate)

@@ -18,6 +18,7 @@ import {
   buildDayPlan,
   type LoggedSetValues,
   resolveNextSlotExerciseKey,
+  type SessionWeightPrecedent,
   swapKey,
   type WorkoutStep,
 } from "@/lib/session-plan";
@@ -206,6 +207,46 @@ function WorkoutSessionView({
     (entry) => entry.stepIndex,
   );
 
+  // Latest set already logged this session for the exercise on screen; its
+  // weight carries over to upcoming sets when it deviated from the prefill.
+  const sessionWeightPrecedent = useMemo<
+    SessionWeightPrecedent | undefined
+  >(() => {
+    const currentStep = plan[state.stepIndex];
+    if (currentStep === undefined) {
+      return undefined;
+    }
+    const currentSlotKey = swapKey(
+      currentStep.itemIndex,
+      currentStep.memberIndex,
+    );
+    const currentExerciseKey =
+      state.swaps[currentSlotKey] ?? currentStep.primaryExerciseKey;
+
+    const precedingEntries = Object.values(state.completed).filter(
+      (entry) =>
+        entry.exerciseKey === currentExerciseKey &&
+        entry.stepIndex < state.stepIndex,
+    );
+    const hasPrecedingEntries = precedingEntries.length > 0;
+    if (!hasPrecedingEntries) {
+      return undefined;
+    }
+
+    const latestEntry = precedingEntries.reduce((latest, entry) =>
+      entry.stepIndex > latest.stepIndex ? entry : latest,
+    );
+    const latestEntryStep = plan[latestEntry.stepIndex];
+    if (latestEntryStep === undefined) {
+      return undefined;
+    }
+    return {
+      plannedSet: latestEntryStep.plannedSet,
+      setIndex: latestEntry.setIndex,
+      weight: latestEntry.weight,
+    };
+  }, [plan, state.stepIndex, state.swaps, state.completed]);
+
   if (step === undefined) {
     return null;
   }
@@ -279,6 +320,7 @@ function WorkoutSessionView({
       progressGroups={progressGroups}
       completedStepIndexes={completedStepIndexes}
       completedEntry={state.completed[state.stepIndex]}
+      sessionWeightPrecedent={sessionWeightPrecedent}
       isFirstStep={state.stepIndex === 0}
       onComplete={handleSetCompleted}
       onSwapChange={handleSwapChange}

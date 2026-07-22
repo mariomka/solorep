@@ -394,6 +394,45 @@ describe("WorkoutScreen", () => {
     );
   });
 
+  it("carries a changed weight over to the remaining sets of the exercise", async () => {
+    await seedSession(0);
+    const user = userEvent.setup();
+    renderWorkout();
+
+    const weightInput = await screen.findByTestId("set-weight-input");
+    await waitFor(() => expect(weightInput).toHaveValue("50"));
+    await user.clear(weightInput);
+    await user.type(weightInput, "55");
+    await user.click(screen.getByTestId("set-continue"));
+    await user.click(await screen.findByTestId("rest-skip"));
+
+    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
+      "Serie 2 de 4",
+    );
+    // Planned set 2 is 60 kg; the 55 kg deviation from set 1 wins.
+    await waitFor(() =>
+      expect(screen.getByTestId("set-weight-input")).toHaveValue("55"),
+    );
+  });
+
+  it("keeps the planned pyramid when the prefilled weight is confirmed", async () => {
+    await seedSession(0);
+    const user = userEvent.setup();
+    renderWorkout();
+
+    const weightInput = await screen.findByTestId("set-weight-input");
+    await waitFor(() => expect(weightInput).toHaveValue("50"));
+    await user.click(screen.getByTestId("set-continue"));
+    await user.click(await screen.findByTestId("rest-skip"));
+
+    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
+      "Serie 2 de 4",
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("set-weight-input")).toHaveValue("60"),
+    );
+  });
+
   it("goes back with Anterior, prefills recorded values, and re-completing overwrites without rest", async () => {
     await seedSession(0);
     const user = userEvent.setup();

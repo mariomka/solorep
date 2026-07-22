@@ -24,6 +24,7 @@ import type { Routine } from "@/lib/routine-schema";
 import {
   type LoggedSetValues,
   resolvePrefill,
+  type SessionWeightPrecedent,
   type WorkoutStep,
 } from "@/lib/session-plan";
 import { prepareTimerAudio } from "@/lib/timer-feedback";
@@ -50,6 +51,7 @@ export interface SetScreenProps {
   progressGroups?: WorkoutProgressGroup[];
   completedStepIndexes?: number[];
   completedEntry: CompletedSetEntry | undefined;
+  sessionWeightPrecedent?: SessionWeightPrecedent;
   isFirstStep: boolean;
   onComplete: (values: LoggedSetValues) => Promise<void>;
   onSwapChange: (alternativeKey: string | null) => Promise<void>;
@@ -213,6 +215,7 @@ export function SetScreen({
   progressGroups = [],
   completedStepIndexes = [],
   completedEntry,
+  sessionWeightPrecedent,
   isFirstStep,
   onComplete,
   onSwapChange,
@@ -272,6 +275,7 @@ export function SetScreen({
           step.plannedSet,
           lastUsedRecord?.sets,
           step.setIndex,
+          sessionWeightPrecedent,
         );
         setRepsInput(prefill.reps?.toString() ?? "");
         setDurationInput(prefill.duration?.toString() ?? "");
@@ -285,7 +289,7 @@ export function SetScreen({
     return () => {
       isActive = false;
     };
-  }, [step, effectiveExerciseKey, completedEntry]);
+  }, [step, effectiveExerciseKey, completedEntry, sessionWeightPrecedent]);
 
   const parsedReps = parsePositiveInteger(repsInput);
   const parsedDuration = parsePositiveInteger(durationInput);
