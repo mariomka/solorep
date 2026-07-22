@@ -25,7 +25,7 @@ The default preference enables both sound and vibration, but consumers receive i
 The UI integration is intentionally thin:
 
 1. Duration sets start automatically as soon as their persisted or planned duration is loaded. Pausing freezes the exact remaining time; resuming continues from that instant rather than restarting the displayed second.
-2. Call `prepareTimerAudio()` from trusted gestures that can lead to an automatic countdown: selecting a day, resuming a session, and `Continuar`. Call it again from `Reanudar` after a pause. Browsers may keep a new `AudioContext` suspended without prior interaction.
+2. Call `prepareTimerAudio()` from trusted gestures that can lead to an automatic countdown: selecting a day, resuming a session, and `Continuar`. Call it again from `Reanudar` after a pause. Browsers may keep a new `AudioContext` suspended without prior interaction. Auto-resume on launch has no gesture, so its countdown may stay silent until the first touch — accepted degradation, never block timing on it.
 3. Use one `useCountdownFeedback()` instance per visible countdown. It owns a `CountdownFeedbackController` and its cleanup.
 4. Pass each changed positive `remainingSeconds` value to `notifySecond()` and call `notifyComplete()` at `0` before navigating away. Repeated values are ignored.
 5. Call `cancel()` when the user pauses, skips, or exits. Natural completion deliberately leaves its short final cue alive across navigation.

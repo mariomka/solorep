@@ -7,6 +7,7 @@ import { RoutineList } from "@/components/routine-list";
 import { SessionSummary } from "@/components/session-summary";
 import { WorkoutScreen } from "@/components/workout-screen";
 import { db, type RoutineRecord } from "@/lib/db";
+import { findAutoResumableSession } from "@/lib/resume-session";
 
 type Screen =
   | { name: "list" }
@@ -74,6 +75,39 @@ function WorkoutRoute({
 
 function App() {
   const [screen, setScreen] = useState<Screen>({ name: "list" });
+  // A session with recent activity re-enters the workout directly on launch
+  // (a backgrounded PWA gets killed mid-rest; reopening must not lose the
+  // countdown behind a prompt). Runs once on mount, so Salir still lands on
+  // the list with the regular resume prompt.
+  const [isAutoResumePending, setIsAutoResumePending] = useState(true);
+  useEffect(() => {
+    let isActive = true;
+    findAutoResumableSession()
+      .then((target) => {
+        if (isActive && target !== undefined) {
+          setScreen({
+            name: "workout",
+            routineId: target.routineId,
+            dayIndex: target.dayIndex,
+          });
+        }
+      })
+      .catch((error: unknown) => {
+        console.error("Failed to check for an auto-resumable session", error);
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsAutoResumePending(false);
+        }
+      });
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  if (isAutoResumePending) {
+    return null;
+  }
 
   return (
     <main

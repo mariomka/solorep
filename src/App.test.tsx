@@ -29,13 +29,17 @@ const miniRoutineData = {
 };
 const miniRoutine = parseRoutine(miniRoutineData);
 
+// Older than AUTO_RESUME_WINDOW_MS: the session shows the resume prompt
+// instead of re-entering the workout on launch.
+const staleUpdatedAt = () => Date.now() - 16 * 60 * 1000;
+
 beforeEach(clearDatabase);
 
 describe("App", () => {
   it("renders the app shell", async () => {
     render(<App />);
 
-    expect(screen.getByTestId("app-shell")).toBeInTheDocument();
+    expect(await screen.findByTestId("app-shell")).toBeInTheDocument();
     expect(screen.getByTestId("app-title")).toHaveTextContent("Solorep");
     expect(
       await screen.findByTestId("import-routine-trigger"),
@@ -162,6 +166,7 @@ describe("App", () => {
       importedAt: Date.now(),
     });
     await startSession(miniRoutine.id, "day-1", 0);
+    await db.activeSession.update("current", { updatedAt: staleUpdatedAt() });
 
     const user = userEvent.setup();
     render(<App />);
@@ -216,6 +221,7 @@ describe("App", () => {
     await startSession(miniRoutine.id, "day-1", 0);
     await db.activeSession.update("current", {
       currentStepIndex: 1,
+      updatedAt: staleUpdatedAt(),
       completed: [
         {
           stepIndex: 0,
@@ -245,6 +251,59 @@ describe("App", () => {
     );
   });
 
+  it("auto-resumes a session with recent activity straight into the workout", async () => {
+    await db.routines.put({
+      id: miniRoutine.id,
+      routine: miniRoutine,
+      importedAt: Date.now(),
+    });
+    await startSession(miniRoutine.id, "day-1", 0);
+    await db.activeSession.update("current", {
+      currentStepIndex: 1,
+      completed: [
+        {
+          stepIndex: 0,
+          slotKey: "0:0",
+          primaryExerciseKey: "push-up",
+          exerciseKey: "push-up",
+          setIndex: 0,
+          reps: 10,
+          completedAt: Date.now(),
+        },
+      ],
+    });
+
+    render(<App />);
+
+    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
+      "Flexiones",
+    );
+    expect(screen.getByTestId("set-progress")).toHaveTextContent(
+      "Serie 2 de 2",
+    );
+    expect(
+      screen.queryByTestId("resume-session-prompt"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("auto-resumes into the remaining rest of a killed session", async () => {
+    await db.routines.put({
+      id: miniRoutine.id,
+      routine: miniRoutine,
+      importedAt: Date.now(),
+    });
+    await startSession(miniRoutine.id, "day-1", 0);
+    await db.activeSession.update("current", {
+      currentStepIndex: 1,
+      restEndsAt: Date.now() + 65_000,
+    });
+
+    render(<App />);
+
+    await screen.findByTestId("rest-screen");
+    expect(screen.getByTestId("rest-timer")).toHaveTextContent(/01:0[0-5]/);
+  });
+
   it("resumes a completed active session directly at the summary", async () => {
     await db.routines.put({
       id: miniRoutine.id,
@@ -255,6 +314,7 @@ describe("App", () => {
     const completedAt = Date.now();
     await db.activeSession.update("current", {
       currentStepIndex: 2,
+      updatedAt: staleUpdatedAt(),
       completed: [
         {
           stepIndex: 0,

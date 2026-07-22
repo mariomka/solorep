@@ -10,8 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { db } from "@/lib/db";
-import type { RoutineDay } from "@/lib/routine-schema";
-import { buildDayPlan } from "@/lib/session-plan";
+import { resolveResumableDay } from "@/lib/resume-session";
 import { discardActiveSession, getActiveSession } from "@/lib/session-store";
 import { prepareTimerAudio } from "@/lib/timer-feedback";
 
@@ -37,18 +36,8 @@ export function ResumeSessionPrompt({ onResume }: ResumeSessionPromptProps) {
   const session = data?.session;
   const record = data?.record;
 
-  let validDay: RoutineDay | undefined;
-  if (session !== undefined && record !== undefined) {
-    // The day at the stored index must still be the stored day: this single
-    // invariant covers both a deleted day and a reordered days array.
-    const day: RoutineDay | undefined = record.routine.days[session.dayIndex];
-    const isDayMatching = day !== undefined && day.id === session.dayId;
-    const isStepIndexInRange =
-      isDayMatching && session.currentStepIndex <= buildDayPlan(day).length;
-    if (isStepIndexInRange) {
-      validDay = day;
-    }
-  }
+  const validDay =
+    session === undefined ? undefined : resolveResumableDay(session, record);
 
   // A session pointing at deleted or mismatched data cannot be resumed:
   // silently drop it instead of surfacing a broken prompt.

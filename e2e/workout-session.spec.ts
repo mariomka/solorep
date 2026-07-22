@@ -117,7 +117,7 @@ test("completes a full session and advances the day pointer", async ({
   await expect(dayACard).not.toContainText("Siguiente");
 });
 
-test("resumes an in-progress session after a reload and discards it", async ({
+test("auto-resumes a fresh session after a reload and discards it from the list", async ({
   page,
 }) => {
   await importRoutine(page);
@@ -138,20 +138,19 @@ test("resumes an in-progress session after a reload and discards it", async ({
 
   await page.reload();
 
-  const resumePrompt = page.getByTestId("resume-session-prompt");
-  await expect(resumePrompt).toBeVisible();
-  await expect(resumePrompt).toContainText(resumePromptTitle);
-  await page.getByTestId("resume-session-resume").click();
-
-  // Resumes on the next uncompleted step.
+  // A session with recent activity skips the resume prompt: the reload lands
+  // back in the workout on the next uncompleted step (the 3 s persisted rest
+  // may still run first; the assertions retry through it).
   const exerciseName = page.getByTestId("set-exercise-name");
   await expect(exerciseName).toBeVisible();
   await expect(exerciseName).toHaveText("Press banca");
   await expect(setProgress).toBeVisible();
   await expect(setProgress).toHaveText("Serie 2 de 2");
 
+  // Salir returns to the list, where the prompt still offers the session.
   await page.getByTestId("set-exit").click();
 
+  const resumePrompt = page.getByTestId("resume-session-prompt");
   await expect(resumePrompt).toBeVisible();
   await expect(resumePrompt).toContainText(resumePromptTitle);
   await page.getByTestId("resume-session-discard").click();

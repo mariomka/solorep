@@ -98,6 +98,7 @@ Do not invent different list behavior for each screen.
 - The routine overflow trigger is vertically centered within its row.
 - Routine deletion is neutral and hidden in that overflow menu.
 - The active-session prompt may be more prominent because resuming is the primary task.
+- A session with activity in the last 15 minutes skips Home entirely on launch and re-enters the workout (`findAutoResumableSession`); the prompt serves stale sessions and post-`Salir` returns only.
 
 ### Day selection
 
