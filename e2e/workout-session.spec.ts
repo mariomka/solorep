@@ -67,18 +67,14 @@ test("completes a full session and advances the day pointer", async ({
   await expect(exerciseName).toHaveText("Extensión de tríceps");
   await continueButton.click();
 
-  // Duration set: the countdown starts automatically and can be paused.
+  // Duration set: the countdown starts automatically in the fixed bottom
+  // dock while the exercise note stays on the page.
   await expect(exerciseName).toBeVisible();
   await expect(exerciseName).toHaveText("Plancha");
-  await page.setViewportSize({ width: 345, height: 713 });
   await expect(page.getByTestId("duration-countdown-screen")).toBeVisible();
   await expect(page.getByTestId("set-exercise-note")).toContainText(
     "Aprieta abdomen y glúteos",
   );
-  const hasVerticalScroll = await page.evaluate(
-    () => document.documentElement.scrollHeight > window.innerHeight,
-  );
-  expect(hasVerticalScroll).toBe(false);
   const durationTimer = page.getByTestId("duration-timer");
   const pauseButton = page.getByTestId("duration-pause");
   await pauseButton.click();

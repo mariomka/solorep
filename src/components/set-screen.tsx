@@ -94,7 +94,6 @@ function parseWeight(rawValue: string): { isValid: boolean; weight?: number } {
 
 interface DurationCountdownProps {
   seconds: number;
-  note: string | undefined;
   isFirstStep: boolean;
   onFinished: () => void;
   onPrevious: () => void;
@@ -102,7 +101,6 @@ interface DurationCountdownProps {
 
 function DurationCountdown({
   seconds,
-  note,
   isFirstStep,
   onFinished,
   onPrevious,
@@ -143,61 +141,49 @@ function DurationCountdown({
   return (
     <div
       data-test="duration-countdown-screen"
-      className="flex min-h-0 flex-1 flex-col"
+      className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 supports-backdrop-filter:backdrop-blur-sm"
     >
-      {note !== undefined && (
-        <p
-          data-test="set-exercise-note"
-          className="mb-4 shrink-0 text-sm leading-relaxed text-muted-foreground"
-        >
-          {note}
-        </p>
-      )}
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center border-b py-6">
-        <p className="mb-4 text-[0.625rem] font-semibold tracking-widest text-muted-foreground uppercase">
-          Temporizador
-        </p>
-        <p
-          data-test="duration-timer"
-          role="timer"
-          aria-live="polite"
-          className={cn(
-            "font-mono text-8xl font-medium tracking-tighter text-primary tabular-nums",
-            isFinalCountdown &&
-              "font-heading text-[9rem] font-black leading-none tracking-tighter",
-          )}
-        >
-          {countdownText}
-        </p>
-        {!isFinalCountdown && (
-          <p className="mt-1 text-[0.625rem] font-semibold tracking-widest text-muted-foreground uppercase">
-            Min : Seg
+      <div className="mx-auto flex w-full max-w-md flex-col gap-4 pt-4 pr-[max(1.25rem,env(safe-area-inset-right))] pb-[max(1.25rem,env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))]">
+        <div className="flex items-baseline justify-between gap-4">
+          <span className="text-[0.625rem] font-semibold tracking-widest text-muted-foreground uppercase">
+            Temporizador
+          </span>
+          <p
+            data-test="duration-timer"
+            role="timer"
+            aria-live="polite"
+            className={cn(
+              "font-mono text-4xl font-medium tracking-tight text-primary tabular-nums",
+              isFinalCountdown && "font-heading text-5xl font-black",
+            )}
+          >
+            {countdownText}
           </p>
-        )}
-      </div>
-      <div className="flex shrink-0 gap-2 pt-4">
-        <Button
-          data-test="set-previous"
-          variant="outline"
-          onClick={onPrevious}
-          disabled={isFirstStep}
-        >
-          Anterior
-        </Button>
-        <Button
-          data-test="duration-pause"
-          className="flex-1"
-          onClick={handlePauseToggle}
-        >
-          {isPaused ? "Reanudar" : "Pausar"}
-        </Button>
-        <Button
-          data-test="duration-skip"
-          variant="outline"
-          onClick={handleSkip}
-        >
-          Saltar
-        </Button>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            data-test="set-previous"
+            variant="outline"
+            onClick={onPrevious}
+            disabled={isFirstStep}
+          >
+            Anterior
+          </Button>
+          <Button
+            data-test="duration-pause"
+            className="flex-1"
+            onClick={handlePauseToggle}
+          >
+            {isPaused ? "Reanudar" : "Pausar"}
+          </Button>
+          <Button
+            data-test="duration-skip"
+            variant="outline"
+            onClick={handleSkip}
+          >
+            Saltar
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -383,12 +369,7 @@ export function SetScreen({
     errorMessage !== undefined;
 
   return (
-    <div
-      className={cn(
-        "flex flex-col gap-7",
-        isDurationCountdownVisible ? "min-h-0 flex-1" : "pb-72",
-      )}
-    >
+    <div className="flex flex-col gap-7 pb-72">
       <header className="border-b pb-5">
         <div className="mb-4 flex items-center justify-between gap-4 text-[0.625rem] font-semibold tracking-widest text-muted-foreground uppercase">
           <span>{dayName ?? "Entrenamiento"}</span>
@@ -470,7 +451,7 @@ export function SetScreen({
         )}
       </header>
 
-      {!isDurationCountdownVisible && hasExerciseActions && (
+      {hasExerciseActions && (
         <div className="flex items-center gap-2">
           {hasInstructions && (
             <Sheet>
@@ -553,36 +534,34 @@ export function SetScreen({
         </div>
       )}
 
-      {!isDurationCountdownVisible &&
-        (isGifVisible || exerciseNote !== undefined) && (
-          <div className="flex flex-col">
-            {isGifVisible && (
-              <img
-                data-test="set-exercise-gif"
-                src={gifUrl}
-                alt={`Demostración de ${exerciseName}`}
-                className="w-full object-contain"
-                onError={() => setHiddenGifUrl(gifUrl)}
-              />
-            )}
-            {exerciseNote !== undefined && (
-              <p
-                data-test="set-exercise-note"
-                className={cn(
-                  "text-sm leading-relaxed text-muted-foreground",
-                  isGifVisible && "mt-3",
-                )}
-              >
-                {exerciseNote}
-              </p>
-            )}
-          </div>
-        )}
+      {(isGifVisible || exerciseNote !== undefined) && (
+        <div className="flex flex-col">
+          {isGifVisible && (
+            <img
+              data-test="set-exercise-gif"
+              src={gifUrl}
+              alt={`Demostración de ${exerciseName}`}
+              className="w-full object-contain"
+              onError={() => setHiddenGifUrl(gifUrl)}
+            />
+          )}
+          {exerciseNote !== undefined && (
+            <p
+              data-test="set-exercise-note"
+              className={cn(
+                "text-sm leading-relaxed text-muted-foreground",
+                isGifVisible && "mt-3",
+              )}
+            >
+              {exerciseNote}
+            </p>
+          )}
+        </div>
+      )}
 
       {isDurationCountdownVisible && (
         <DurationCountdown
           seconds={parsedDuration}
-          note={exerciseNote}
           isFirstStep={isFirstStep}
           onFinished={handleDurationFinished}
           onPrevious={onPrevious}
