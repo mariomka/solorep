@@ -144,7 +144,7 @@ function DurationCountdown({
       className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 supports-backdrop-filter:backdrop-blur-sm"
     >
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 pt-4 pr-[max(1.25rem,env(safe-area-inset-right))] pb-[max(1.25rem,env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))]">
-        <div className="flex items-baseline justify-between gap-4">
+        <div className="flex items-start justify-between gap-4">
           <span className="text-[0.625rem] font-semibold tracking-widest text-muted-foreground uppercase">
             Temporizador
           </span>
@@ -153,7 +153,7 @@ function DurationCountdown({
             role="timer"
             aria-live="polite"
             className={cn(
-              "font-mono text-4xl font-medium tracking-tight text-primary tabular-nums",
+              "font-mono text-4xl font-medium leading-none tracking-tight text-primary tabular-nums",
               isFinalCountdown && "font-heading text-5xl font-black",
             )}
           >
