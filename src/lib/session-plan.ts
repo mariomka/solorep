@@ -82,6 +82,40 @@ export function swapKey(itemIndex: number, memberIndex: number): string {
 }
 
 /**
+ * Effective exercise key of the next slot the session will reach after the
+ * current step: the first later step belonging to a different slot, with the
+ * session's swaps applied. `undefined` on the last slot of the day.
+ */
+export function resolveNextSlotExerciseKey(
+  plan: WorkoutStep[],
+  currentStepIndex: number,
+  swaps: Record<string, string>,
+): string | undefined {
+  const currentStep = plan[currentStepIndex];
+  if (currentStep === undefined) {
+    return undefined;
+  }
+
+  const currentSlotKey = swapKey(
+    currentStep.itemIndex,
+    currentStep.memberIndex,
+  );
+  for (
+    let stepIndex = currentStepIndex + 1;
+    stepIndex < plan.length;
+    stepIndex++
+  ) {
+    const step = plan[stepIndex];
+    const stepSlotKey = swapKey(step.itemIndex, step.memberIndex);
+    const isDifferentSlot = stepSlotKey !== currentSlotKey;
+    if (isDifferentSlot) {
+      return swaps[stepSlotKey] ?? step.primaryExerciseKey;
+    }
+  }
+  return undefined;
+}
+
+/**
  * Resolves the values to prefill for a set: last-used values for the same set
  * index win; extra sets fall back to the last known value; the routine's
  * planned set is the base. Field-wise, a reps-based plan never takes reps from

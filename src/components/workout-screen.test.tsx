@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   afterEach,
@@ -283,6 +283,37 @@ describe("WorkoutScreen", () => {
     expect(screen.getByTestId("workout-progress-step-3")).toHaveAttribute(
       "data-state",
       "pending",
+    );
+  });
+
+  it("shows the upcoming exercise name and hides it on the last slot", async () => {
+    await seedSession(0);
+    renderWorkout();
+
+    // Back-squat sets are followed by bench-press.
+    expect(await screen.findByTestId("set-next-exercise")).toHaveTextContent(
+      "Press banca",
+    );
+
+    cleanup();
+
+    // Step 11 is the plank, the day's last slot.
+    await clearDatabase();
+    await seedSession(0, 11);
+    renderWorkout();
+
+    await screen.findByTestId("set-exercise-name");
+    expect(screen.queryByTestId("set-next-exercise")).not.toBeInTheDocument();
+  });
+
+  it("shows the swapped alternative as the upcoming exercise", async () => {
+    // Step 3 is the last back-squat set; the next slot is bench-press.
+    await seedSession(0, 3);
+    await recordSwap(1, 0, "dumbbell-bench-press");
+    renderWorkout();
+
+    expect(await screen.findByTestId("set-next-exercise")).toHaveTextContent(
+      "Press banca con mancuernas",
     );
   });
 

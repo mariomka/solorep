@@ -5,6 +5,7 @@ import { parseRoutine } from "./routine-schema";
 import {
   buildDayPlan,
   computeSummary,
+  resolveNextSlotExerciseKey,
   resolvePrefill,
   swapKey,
 } from "./session-plan";
@@ -173,6 +174,66 @@ describe("buildDayPlan", () => {
       null,
     ]);
     expect(supersetSteps.every((step) => step.itemIndex === 3)).toBe(true);
+  });
+});
+
+describe("resolveNextSlotExerciseKey", () => {
+  function twoExerciseDay(): RoutineDay {
+    return {
+      id: "day-1",
+      name: "Empuje",
+      exercises: [
+        {
+          exercise: "bench-press",
+          rest: 90,
+          sets: [{ reps: 12 }, { reps: 10 }],
+        },
+        {
+          exercise: "overhead-press",
+          alternatives: ["dumbbell-shoulder-press"],
+          rest: 90,
+          sets: [{ reps: 10 }],
+        },
+      ],
+    };
+  }
+
+  it("returns the next exercise while inside an earlier exercise's sets", () => {
+    const plan = buildDayPlan(twoExerciseDay());
+
+    expect(resolveNextSlotExerciseKey(plan, 0, {})).toBe("overhead-press");
+    expect(resolveNextSlotExerciseKey(plan, 1, {})).toBe("overhead-press");
+  });
+
+  it("returns undefined on the day's last slot", () => {
+    const plan = buildDayPlan(twoExerciseDay());
+
+    expect(resolveNextSlotExerciseKey(plan, 2, {})).toBeUndefined();
+  });
+
+  it("applies the session swap of the upcoming slot", () => {
+    const plan = buildDayPlan(twoExerciseDay());
+
+    expect(
+      resolveNextSlotExerciseKey(plan, 0, {
+        "1:0": "dumbbell-shoulder-press",
+      }),
+    ).toBe("dumbbell-shoulder-press");
+  });
+
+  it("alternates members within a superset", () => {
+    const plan = buildDayPlan(supersetDay());
+
+    expect(resolveNextSlotExerciseKey(plan, 0, {})).toBe("triceps-pushdown");
+    expect(resolveNextSlotExerciseKey(plan, 1, {})).toBe("biceps-curl");
+    expect(resolveNextSlotExerciseKey(plan, 4, {})).toBe("triceps-pushdown");
+    expect(resolveNextSlotExerciseKey(plan, 5, {})).toBeUndefined();
+  });
+
+  it("returns undefined when the current step is out of range", () => {
+    const plan = buildDayPlan(twoExerciseDay());
+
+    expect(resolveNextSlotExerciseKey(plan, 3, {})).toBeUndefined();
   });
 });
 

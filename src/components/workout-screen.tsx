@@ -17,6 +17,7 @@ import { workoutScreenWakeLock } from "@/lib/screen-wake-lock";
 import {
   buildDayPlan,
   type LoggedSetValues,
+  resolveNextSlotExerciseKey,
   swapKey,
   type WorkoutStep,
 } from "@/lib/session-plan";
@@ -211,6 +212,11 @@ function WorkoutSessionView({
 
   const slotKey = swapKey(step.itemIndex, step.memberIndex);
   const effectiveExerciseKey = state.swaps[slotKey] ?? step.primaryExerciseKey;
+  const nextExerciseKey = resolveNextSlotExerciseKey(
+    plan,
+    state.stepIndex,
+    state.swaps,
+  );
 
   const handleSetCompleted = async (values: LoggedSetValues) => {
     const completedStepIndex = state.stepIndex;
@@ -267,6 +273,7 @@ function WorkoutSessionView({
       effectiveExerciseKey={effectiveExerciseKey}
       setNumber={step.setIndex + 1}
       totalSets={totalSets}
+      nextExerciseKey={nextExerciseKey}
       dayName={day.name}
       currentStepIndex={state.stepIndex}
       progressGroups={progressGroups}

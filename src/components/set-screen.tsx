@@ -44,6 +44,7 @@ export interface SetScreenProps {
   effectiveExerciseKey: string;
   setNumber: number;
   totalSets: number;
+  nextExerciseKey?: string;
   dayName?: string;
   currentStepIndex?: number;
   progressGroups?: WorkoutProgressGroup[];
@@ -206,6 +207,7 @@ export function SetScreen({
   effectiveExerciseKey,
   setNumber,
   totalSets,
+  nextExerciseKey,
   dayName,
   currentStepIndex,
   progressGroups = [],
@@ -232,6 +234,10 @@ export function SetScreen({
 
   const isRepsSet = "reps" in step.plannedSet;
   const exerciseName = getExerciseName(exerciseCatalog, effectiveExerciseKey);
+  const nextExerciseName =
+    nextExerciseKey === undefined
+      ? undefined
+      : getExerciseName(exerciseCatalog, nextExerciseKey);
   const catalogEntry: { datasetId?: string; note?: string } | undefined =
     exerciseCatalog[effectiveExerciseKey];
   const datasetId = catalogEntry?.datasetId;
@@ -446,6 +452,17 @@ export function SetScreen({
               </div>
             ))}
           </div>
+        )}
+        {nextExerciseName !== undefined && (
+          <p
+            data-test="set-next-exercise"
+            className="mt-4 flex items-baseline gap-2 text-sm text-muted-foreground"
+          >
+            <span className="text-[0.625rem] font-semibold tracking-widest uppercase">
+              Siguiente
+            </span>
+            <span className="min-w-0 truncate">{nextExerciseName}</span>
+          </p>
         )}
       </header>
 
