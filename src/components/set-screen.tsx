@@ -441,12 +441,9 @@ export function SetScreen({
         {nextExerciseName !== undefined && (
           <p
             data-test="set-next-exercise"
-            className="mt-4 flex items-baseline gap-2 text-sm text-muted-foreground"
+            className="mt-4 truncate text-sm text-muted-foreground"
           >
-            <span className="text-[0.625rem] font-semibold tracking-widest uppercase">
-              Siguiente
-            </span>
-            <span className="min-w-0 truncate">{nextExerciseName}</span>
+            Siguiente: {nextExerciseName}
           </p>
         )}
       </header>
