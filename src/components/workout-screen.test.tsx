@@ -1505,3 +1505,131 @@ describe("day item phases", () => {
     expect(screen.queryByTestId("set-postponed-items")).not.toBeInTheDocument();
   });
 });
+
+describe("progress bar phase grouping", () => {
+  // 2 warm-ups, a 2-set exercise, a 2x2 superset, 2 stretches: 11 steps.
+  const phasedProgressRoutine = parseRoutine({
+    id: "phased-progress",
+    name: "Phased progress",
+    exercises: {
+      "jumping-jacks": { name: "Jumping Jacks" },
+      "cat-cow": { name: "Gato-Vaca" },
+      "belt-squat": { name: "Belt Squat" },
+      curl: { name: "Curl" },
+      extension: { name: "Extension" },
+      "quad-stretch": { name: "Estiramiento de cuádriceps" },
+      "lat-stretch": { name: "Estiramiento de dorsal" },
+    },
+    days: [
+      {
+        id: "phased-progress-day",
+        name: "Día con fases",
+        exercises: [
+          {
+            phase: "warmup",
+            exercise: "jumping-jacks",
+            rest: 0,
+            sets: [{ reps: 30 }],
+          },
+          {
+            phase: "warmup",
+            exercise: "cat-cow",
+            rest: 0,
+            sets: [{ reps: 10 }],
+          },
+          {
+            exercise: "belt-squat",
+            rest: 60,
+            sets: [{ reps: 8 }, { reps: 8 }],
+          },
+          {
+            superset: [
+              { exercise: "curl", sets: [{ reps: 12 }, { reps: 10 }] },
+              { exercise: "extension", sets: [{ reps: 12 }, { reps: 10 }] },
+            ],
+            rest: 60,
+          },
+          {
+            phase: "cooldown",
+            exercise: "quad-stretch",
+            rest: 0,
+            sets: [{ duration: 30 }],
+          },
+          {
+            phase: "cooldown",
+            exercise: "lat-stretch",
+            rest: 0,
+            sets: [{ duration: 30 }],
+          },
+        ],
+      },
+    ],
+  });
+
+  async function renderPhasedProgress() {
+    await db.routines.put({
+      id: phasedProgressRoutine.id,
+      routine: phasedProgressRoutine,
+      importedAt: Date.now(),
+    });
+    await startSession(phasedProgressRoutine.id, "phased-progress-day", 0);
+    render(
+      <WorkoutScreen
+        routine={phasedProgressRoutine}
+        dayIndex={0}
+        onDayCompleted={vi.fn()}
+        onExit={vi.fn()}
+      />,
+    );
+    await screen.findByTestId("set-exercise-name");
+  }
+
+  /** Group key of each segment, keyed by the step it represents. */
+  function groupKeyByStep(): Record<number, string> {
+    const segments = screen.getAllByTestId(/^workout-progress-step-\d+$/);
+    return Object.fromEntries(
+      segments.map((segment) => {
+        const testId = segment.getAttribute("data-test") ?? "";
+        const stepIndex = Number(testId.replace("workout-progress-step-", ""));
+        return [stepIndex, segment.getAttribute("data-group") ?? ""];
+      }),
+    );
+  }
+
+  it("collapses each warm-up and stretch run into a single group", async () => {
+    await renderPhasedProgress();
+
+    const groupKeys = groupKeyByStep();
+    expect(Object.keys(groupKeys)).toHaveLength(10);
+    // Both warm-up steps share one group, and so do both stretches.
+    expect(groupKeys[0]).toBe(groupKeys[1]);
+    expect(groupKeys[8]).toBe(groupKeys[9]);
+    // Warm-up and cool-down are separate runs, never the same group.
+    expect(groupKeys[0]).not.toBe(groupKeys[8]);
+    // Neither collapses into a work slot.
+    expect(groupKeys[0]).not.toBe(groupKeys[2]);
+  });
+
+  it("keeps one group per work slot, including each superset member", async () => {
+    await renderPhasedProgress();
+
+    const groupKeys = groupKeyByStep();
+    // The plain exercise's two sets.
+    expect(groupKeys[2]).toBe("2:0");
+    expect(groupKeys[3]).toBe("2:0");
+    // The superset alternates its members (A1 B1 A2 B2), so each slot's steps
+    // are not contiguous and must still land in one group.
+    expect(groupKeys[4]).toBe("3:0");
+    expect(groupKeys[6]).toBe("3:0");
+    expect(groupKeys[5]).toBe("3:1");
+    expect(groupKeys[7]).toBe("3:1");
+  });
+
+  it("gives every work slot its own group instead of one run", async () => {
+    await renderPhasedProgress();
+
+    const groupKeys = groupKeyByStep();
+    const workGroupKeys = [2, 3, 4, 5, 6, 7].map((step) => groupKeys[step]);
+    expect(new Set(workGroupKeys).size).toBe(3);
+  });
+});

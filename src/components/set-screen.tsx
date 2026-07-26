@@ -35,7 +35,7 @@ import { cn } from "@/lib/utils";
 export type CompletedSetEntry = ActiveSessionRecord["completed"][number];
 
 export interface WorkoutProgressGroup {
-  slotKey: string;
+  groupKey: string;
   stepIndexes: number[];
 }
 
@@ -497,8 +497,8 @@ export function SetScreen({
           <div className="mt-5 flex gap-1" aria-hidden="true">
             {progressGroups.map((group) => (
               <div
-                key={group.slotKey}
-                data-test={`workout-progress-group-${group.slotKey}`}
+                key={group.groupKey}
+                data-test={`workout-progress-group-${group.groupKey}`}
                 className="flex min-w-0 basis-0 gap-px"
                 style={{ flexGrow: group.stepIndexes.length }}
               >
@@ -517,7 +517,7 @@ export function SetScreen({
                     <span
                       key={progressStepIndex}
                       data-test={`workout-progress-step-${progressStepIndex}`}
-                      data-group={group.slotKey}
+                      data-group={group.groupKey}
                       data-state={progressState}
                       className={cn(
                         "h-1 flex-1",

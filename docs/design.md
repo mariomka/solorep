@@ -110,8 +110,11 @@ Do not invent different list behavior for each screen.
 
 - Selecting a day opens its overview without creating an active session.
 - Show one compact row per scheduled exercise, including every superset member, in execution order.
+- Group the day into phase sections with an eyebrow label and a count: `Calentamiento`, `Principal`, `Estiramientos`. Group contiguous runs rather than phases, so an unusual day gets more sections instead of a list reordered away from execution order. A day with a single run -- any routine authored before phases -- stays one unlabelled list.
+- Only `work` rows get the full treatment: number, thumbnail, note. Warm-ups and stretches are a name and a prescription on one line. They are most of the rows and the least of the session, and their note still shows on the set screen when the exercise comes up.
 - Include the exercise thumbnail when dataset media exists; do not render an empty placeholder when it does not.
-- Keep prescriptions compact: series plus planned repetitions or duration.
+- Keep prescriptions compact: series plus planned repetitions or duration. A single-set row drops the `1 serie ·` prefix.
+- Number each work section from one; the warm-up above it does not consume positions.
 - Place the single primary `Empezar entrenamiento` action after the exercise list. Starting is the point that creates the active session.
 
 ### Workout execution
@@ -129,7 +132,8 @@ Do not invent different list behavior for each screen.
 
 ### Progress
 
-- Progress is grouped by exercise slot.
+- Progress is grouped by exercise slot, so a segment reads as a set within its exercise. Supersets keep one group per member even though their steps interleave.
+- Warm-ups and stretches collapse per contiguous run into a single group instead. A dozen single-set items would otherwise shatter the bar into slivers that say nothing.
 - Each group contains one segment per set.
 - Completed and current segments use the primary color; pending segments use the border color.
 - Small gaps separate sets and larger gaps separate exercise groups.

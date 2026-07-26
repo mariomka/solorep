@@ -13,7 +13,8 @@ import {
   type WorkoutProgressGroup,
 } from "@/components/set-screen";
 import type { ActiveSessionRecord } from "@/lib/db";
-import type { Routine, RoutineDay } from "@/lib/routine-schema";
+import type { DayItemPhase, Routine, RoutineDay } from "@/lib/routine-schema";
+import { resolveItemPhase } from "@/lib/routine-schema";
 import { workoutScreenWakeLock } from "@/lib/screen-wake-lock";
 import {
   appendPostponedItems,
@@ -225,24 +226,48 @@ function WorkoutSessionView({
     ).length;
   }, [plan, step]);
 
+  // Work keeps one group per slot, so a set still reads as a position inside
+  // its exercise. Warm-ups and stretches collapse per contiguous run instead:
+  // a dozen single-set items would otherwise shatter the bar into slivers that
+  // say nothing. Grouping work by slot rather than by run is deliberate --
+  // a superset's members alternate (A1 B1 A2 B2), so its steps are not
+  // contiguous and a run would split one exercise into several groups.
   const progressGroups = useMemo(() => {
-    const stepIndexesBySlot = new Map<string, number[]>();
+    const stepIndexesByGroup = new Map<string, number[]>();
+    let previousPhase: DayItemPhase | undefined;
+    let currentRunKey = "";
+    let runCount = 0;
 
     plan.forEach((planStep, planStepIndex) => {
-      const planSlotKey = swapKey(planStep.itemIndex, planStep.memberIndex);
-      const existingStepIndexes = stepIndexesBySlot.get(planSlotKey) ?? [];
+      const phase = resolveItemPhase(day.exercises[planStep.itemIndex]);
+      const isWorkStep = isWorkItem(day, planStep.itemIndex);
+
+      let groupKey: string;
+      if (isWorkStep) {
+        groupKey = swapKey(planStep.itemIndex, planStep.memberIndex);
+      } else {
+        const continuesRun = previousPhase === phase;
+        if (!continuesRun) {
+          runCount += 1;
+          currentRunKey = `${phase}:${runCount}`;
+        }
+        groupKey = currentRunKey;
+      }
+      previousPhase = phase;
+
+      const existingStepIndexes = stepIndexesByGroup.get(groupKey) ?? [];
       existingStepIndexes.push(planStepIndex);
-      stepIndexesBySlot.set(planSlotKey, existingStepIndexes);
+      stepIndexesByGroup.set(groupKey, existingStepIndexes);
     });
 
     return Array.from(
-      stepIndexesBySlot,
-      ([slotKey, stepIndexes]): WorkoutProgressGroup => ({
-        slotKey,
+      stepIndexesByGroup,
+      ([groupKey, stepIndexes]): WorkoutProgressGroup => ({
+        groupKey,
         stepIndexes,
       }),
     );
-  }, [plan]);
+  }, [day, plan]);
 
   const completedStepIndexes = Object.values(state.completed).map(
     (entry) => entry.stepIndex,

@@ -5,7 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db";
 import { getExerciseGifUrl } from "@/lib/exercise-media";
-import type { ExerciseSet, Routine, RoutineDay } from "@/lib/routine-schema";
+import type {
+  DayItemPhase,
+  ExerciseSet,
+  Routine,
+  RoutineDay,
+} from "@/lib/routine-schema";
+import { resolveItemPhase } from "@/lib/routine-schema";
 import { startSession } from "@/lib/session-store";
 import { prepareTimerAudio } from "@/lib/timer-feedback";
 import { cn } from "@/lib/utils";
@@ -25,7 +31,19 @@ interface DayOverviewEntry {
   isSuperset: boolean;
 }
 
+/** A contiguous run of items sharing a phase, in execution order. */
+interface DayOverviewSection {
+  phase: DayItemPhase;
+  entries: DayOverviewEntry[];
+}
+
 type CatalogEntry = Routine["exercises"][string];
+
+const SECTION_LABELS: Record<DayItemPhase, string> = {
+  warmup: "Calentamiento",
+  work: "Principal",
+  cooldown: "Estiramientos",
+};
 
 function buildDayOverviewEntries(day: RoutineDay): DayOverviewEntry[] {
   return day.exercises.flatMap((item, itemIndex) => {
@@ -40,6 +58,40 @@ function buildDayOverviewEntries(day: RoutineDay): DayOverviewEntry[] {
       isSuperset,
     }));
   });
+}
+
+/**
+ * Groups the day into contiguous runs of the same phase. Runs rather than
+ * phases: the overview promises execution order, so an unusual day that
+ * interleaves phases gets more sections instead of a reordered list. A day
+ * with a single run (every routine authored before phases existed) yields one
+ * unlabelled section and renders exactly as it always did.
+ */
+function buildDayOverviewSections(day: RoutineDay): DayOverviewSection[] {
+  const sections: DayOverviewSection[] = [];
+
+  day.exercises.forEach((item, itemIndex) => {
+    const phase = resolveItemPhase(item);
+    const isSuperset = "superset" in item;
+    const members = isSuperset ? item.superset : [item];
+    const entries = members.map((member, memberIndex) => ({
+      itemIndex,
+      memberIndex,
+      exerciseKey: member.exercise,
+      sets: member.sets,
+      isSuperset,
+    }));
+
+    const currentSection = sections[sections.length - 1];
+    const continuesRun = currentSection?.phase === phase;
+    if (continuesRun) {
+      currentSection.entries.push(...entries);
+      return;
+    }
+    sections.push({ phase, entries });
+  });
+
+  return sections;
 }
 
 function formatSeriesCount(seriesCount: number): string {
@@ -64,6 +116,53 @@ function formatSetPrescription(sets: ExerciseSet[]): string {
   }
 
   return seriesText;
+}
+
+/**
+ * Prescription for a compact row. Single-set warm-ups and stretches are the
+ * norm, and "1 serie ·" in front of every one of them is noise, so the series
+ * count only appears once there is more than one.
+ */
+function formatCompactPrescription(sets: ExerciseSet[]): string {
+  const isSingleSet = sets.length === 1;
+  if (!isSingleSet) {
+    return formatSetPrescription(sets);
+  }
+
+  const [set] = sets;
+  return "reps" in set ? `${set.reps} rep.` : `${set.duration} s`;
+}
+
+interface CompactOverviewRowProps {
+  entry: DayOverviewEntry;
+  catalogEntry: CatalogEntry | undefined;
+}
+
+/**
+ * Warm-ups and stretches: name and prescription on one line, no thumbnail and
+ * no number. They are the bulk of the rows and the least of the session, and
+ * their note still shows on the set screen when the exercise comes up.
+ */
+function CompactOverviewRow({ entry, catalogEntry }: CompactOverviewRowProps) {
+  const exerciseName = catalogEntry?.name ?? entry.exerciseKey;
+  const entryKey = `${entry.itemIndex}-${entry.memberIndex}`;
+
+  return (
+    <div
+      data-test={`day-overview-exercise-${entryKey}`}
+      className="flex items-baseline justify-between gap-4 border-b py-3"
+    >
+      <p
+        data-test={`day-overview-exercise-name-${entryKey}`}
+        className="min-w-0 truncate text-sm"
+      >
+        {exerciseName}
+      </p>
+      <p className="shrink-0 text-sm text-muted-foreground tabular-nums">
+        {formatCompactPrescription(entry.sets)}
+      </p>
+    </div>
+  );
 }
 
 interface ExerciseOverviewRowProps {
@@ -160,6 +259,10 @@ export function DayOverview({
   }
 
   const entries = buildDayOverviewEntries(day);
+  const sections = buildDayOverviewSections(day);
+  // A day with a single run has nothing to distinguish, so it stays the plain
+  // unlabelled list it was before phases existed.
+  const isSectioned = sections.length > 1;
   const totalSeries = entries.reduce(
     (seriesCount, entry) => seriesCount + entry.sets.length,
     0,
@@ -208,16 +311,43 @@ export function DayOverview({
         {formatSeriesCount(totalSeries)}
       </p>
 
-      <div className="border-t">
-        {entries.map((entry, entryIndex) => (
-          <ExerciseOverviewRow
-            key={`${entry.itemIndex}:${entry.memberIndex}`}
-            entry={entry}
-            catalogEntry={record.routine.exercises[entry.exerciseKey]}
-            position={entryIndex + 1}
-          />
-        ))}
-      </div>
+      {sections.map((section) => {
+        const isWorkSection = section.phase === "work";
+        return (
+          <section
+            key={`${section.phase}-${section.entries[0].itemIndex}`}
+            data-test={`day-overview-section-${section.phase}`}
+            className="mb-8 last:mb-0"
+          >
+            {isSectioned && (
+              <h3
+                data-test={`day-overview-section-label-${section.phase}`}
+                className="mb-3 text-[0.625rem] font-semibold tracking-widest text-muted-foreground uppercase"
+              >
+                {SECTION_LABELS[section.phase]} · {section.entries.length}
+              </h3>
+            )}
+            <div className="border-t">
+              {section.entries.map((entry, entryIndex) =>
+                isWorkSection ? (
+                  <ExerciseOverviewRow
+                    key={`${entry.itemIndex}:${entry.memberIndex}`}
+                    entry={entry}
+                    catalogEntry={record.routine.exercises[entry.exerciseKey]}
+                    position={entryIndex + 1}
+                  />
+                ) : (
+                  <CompactOverviewRow
+                    key={`${entry.itemIndex}:${entry.memberIndex}`}
+                    entry={entry}
+                    catalogEntry={record.routine.exercises[entry.exerciseKey]}
+                  />
+                ),
+              )}
+            </div>
+          </section>
+        );
+      })}
 
       {errorMessage !== undefined && (
         <p
