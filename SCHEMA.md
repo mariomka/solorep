@@ -21,13 +21,21 @@ The contract between routine-authoring agents and the app. Validated with Zod on
     },
     "dumbbell-press": { "name": "Press mancuernas" },
     "goblet-squat": { "name": "Goblet Squat" },
-    "plank": { "name": "Plancha" }
+    "plank": { "name": "Plancha" },
+    "jumping-jacks": { "name": "Jumping Jacks" },
+    "quad-stretch": { "name": "Estiramiento de cuádriceps" }
   },
   "days": [
     {
       "id": "day-1",                // stable id for progress tracking
       "name": "Empuje",
       "exercises": [
+        {
+          "phase": "warmup",        // omit for the working sets; see Phases
+          "exercise": "jumping-jacks",
+          "rest": 0,
+          "sets": [{ "reps": 30 }]
+        },
         {
           "exercise": "bench-press",
           "alternatives": ["dumbbell-press"],
@@ -69,6 +77,12 @@ The contract between routine-authoring agents and the app. Validated with Zod on
             }
           ],
           "rest": 90
+        },
+        {
+          "phase": "cooldown",
+          "exercise": "quad-stretch",
+          "rest": 0,
+          "sets": [{ "duration": 30 }]
         }
       ]
     }
@@ -92,12 +106,32 @@ The contract between routine-authoring agents and the app. Validated with Zod on
   Edits during a session persist as the new last-used.
 - **Alternatives**: swapping to an alternative tracks under the *alternative's* key —
   each exercise keeps its own history.
+- **Phase** (`"warmup" | "work" | "cooldown"`, optional, defaults to `"work"`) classifies a
+  day item. Omit it on working sets and set it only on warm-up and cool-down items, so the
+  annotated items are the exceptional ones. Routines authored before the field existed are
+  treated as all-`work`, which is exactly their old behavior.
+
+  It exists because the app must know which items are the actual training:
+
+  - **Only `work` items can be postponed.** Warm-ups and stretches need no machine, so
+    "someone is using it" never applies to them. Without the field the app offered to
+    postpone every single-set stretch, because a 1-set item's first set is also its only
+    one and the postpone guard keys off the first set.
+  - **A postponed exercise lands right before the first `cooldown` item**, not at the end
+    of the day. Ending a session with a heavy lift after eight stretches is not a workout.
+    A day with no cool-down keeps the queue at the end.
+
+  Phases are expected in `warmup → work → cooldown` order. Nothing enforces it, but a
+  `work` item placed after a cool-down cannot be postponed: the queue lands ahead of it,
+  so moving it would send it backwards past sets already logged.
+
 - **Days are a loop.** The app stores a pointer per routine (next day index) and
   advances it when a session is completed. Manual day selection always possible.
 - **`rest`**: seconds between sets of that exercise. Rest between exercises: the user
   advances manually (gym reality: moving stations takes variable time).
-- **Supersets**: a day item can be `{ "superset": [members], "rest" }` instead of a
-  single exercise. Rounds = length of each member's `sets` array — all members must
+- **Supersets**: a day item can be `{ "superset": [members], "rest", "phase"? }` instead
+  of a single exercise (`phase` behaves exactly as on a plain exercise; members carry no
+  phase of their own). Rounds = length of each member's `sets` array — all members must
   have the same length (validated on import). Execution alternates members within a
   round (A1 → B1 → rest → A2 → B2 → rest…). No rest between members inside a round.
   Works for circuits too (3+ members). Alternatives and last-used tracking behave

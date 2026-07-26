@@ -10,6 +10,7 @@ import {
   getActiveSession,
   recordSetCompletion,
   recordSwap,
+  setPostponedItems,
   startSession,
 } from "./session-store";
 
@@ -36,6 +37,7 @@ describe("startSession", () => {
       dayIndex: 0,
       currentStepIndex: 0,
       swaps: {},
+      postponed: [],
       completed: [],
     });
 
@@ -50,6 +52,7 @@ describe("startSession", () => {
       dayIndex: 1,
       currentStepIndex: 0,
       swaps: {},
+      postponed: [],
       completed: [],
     });
   });
@@ -220,6 +223,64 @@ describe("recordSwap", () => {
 
     const afterClear = await getActiveSession();
     expect(afterClear?.swaps).toEqual({ "3:1": "leg-press" });
+  });
+});
+
+describe("setPostponedItems", () => {
+  it("stores the queue without touching the pointer or the completed entries", async () => {
+    await startSession("fullbody-3d", "day-1", 0);
+    await recordSetCompletion({
+      stepIndex: 0,
+      ...completionIdentity("back-squat"),
+      exerciseKey: "back-squat",
+      setIndex: 0,
+      reps: 10,
+      weight: 50,
+    });
+    const before = await getActiveSession();
+
+    await setPostponedItems([2, 1]);
+
+    const after = await getActiveSession();
+    expect(after?.postponed).toEqual([2, 1]);
+    expect(after?.currentStepIndex).toBe(before?.currentStepIndex);
+    expect(after?.completed).toEqual(before?.completed);
+    expect(after?.swaps).toEqual(before?.swaps);
+    expect(after?.updatedAt).toBeGreaterThanOrEqual(before?.updatedAt ?? 0);
+  });
+
+  it("replaces the persisted queue wholesale, repairing a stale one", async () => {
+    await startSession("fullbody-3d", "day-1", 0);
+    // A queue the plan would never apply (duplicated, out of range).
+    await db.activeSession.update("current", { postponed: [9, 9] });
+
+    await setPostponedItems([1]);
+
+    const session = await getActiveSession();
+    expect(session?.postponed).toEqual([1]);
+  });
+
+  it("throws without an active session", async () => {
+    await expect(setPostponedItems([1])).rejects.toThrow(
+      "No active session to postpone items in.",
+    );
+  });
+
+  it("preserves a persisted rest deadline", async () => {
+    await startSession("fullbody-3d", "day-1", 0);
+    await recordSetCompletion({
+      stepIndex: 0,
+      ...completionIdentity("back-squat"),
+      exerciseKey: "back-squat",
+      setIndex: 0,
+      reps: 10,
+      restEndsAt: 1_234_567,
+    });
+
+    await setPostponedItems([1]);
+
+    const session = await getActiveSession();
+    expect(session?.restEndsAt).toBe(1_234_567);
   });
 });
 

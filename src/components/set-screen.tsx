@@ -1,5 +1,5 @@
 import { ChevronDown } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -39,6 +39,16 @@ export interface WorkoutProgressGroup {
   stepIndexes: number[];
 }
 
+/**
+ * A day item waiting behind the rest of the work -- right before the day's
+ * first cool-down item, or at the end of the day when it has none -- with its
+ * effective key.
+ */
+export interface PostponedItem {
+  itemIndex: number;
+  exerciseKey: string;
+}
+
 export interface SetScreenProps {
   step: WorkoutStep;
   exerciseCatalog: Routine["exercises"];
@@ -53,8 +63,14 @@ export interface SetScreenProps {
   completedEntry: CompletedSetEntry | undefined;
   sessionWeightPrecedent?: SessionWeightPrecedent;
   isFirstStep: boolean;
+  canReorderPlan?: boolean;
+  isReorderRedundant?: boolean;
+  isCurrentItemPostponed?: boolean;
+  postponedItems?: PostponedItem[];
   onComplete: (values: LoggedSetValues) => Promise<void>;
   onSwapChange: (alternativeKey: string | null) => Promise<void>;
+  onPostpone: () => Promise<void>;
+  onPostponedItemSelected: (itemIndex: number) => Promise<void>;
   onPrevious: () => void;
   onExit: () => void;
 }
@@ -203,8 +219,14 @@ export function SetScreen({
   completedEntry,
   sessionWeightPrecedent,
   isFirstStep,
+  canReorderPlan = false,
+  isReorderRedundant = false,
+  isCurrentItemPostponed = false,
+  postponedItems = [],
   onComplete,
   onSwapChange,
+  onPostpone,
+  onPostponedItemSelected,
   onPrevious,
   onExit,
 }: SetScreenProps) {
@@ -216,9 +238,13 @@ export function SetScreen({
     undefined,
   );
   const [isSwapPending, setIsSwapPending] = useState(false);
+  const [isPostponePending, setIsPostponePending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>(
     undefined,
   );
+  const [postponeErrorMessage, setPostponeErrorMessage] = useState<
+    string | undefined
+  >(undefined);
   const hasSubmittedRef = useRef(false);
 
   const isRepsSet = "reps" in step.plannedSet;
@@ -282,16 +308,24 @@ export function SetScreen({
   const weightParse = parseWeight(weightInput);
 
   const canContinue =
-    parsedReps !== undefined && weightParse.isValid && !isSwapPending;
+    parsedReps !== undefined &&
+    weightParse.isValid &&
+    !isSwapPending &&
+    !isPostponePending;
 
-  const submitCompletion = (values: LoggedSetValues) => {
+  /** Returns whether the completion was actually submitted. */
+  const submitCompletion = (values: LoggedSetValues): boolean => {
     // Guards against double submission (double tap, or the countdown firing
-    // in the same tick as a manual skip).
-    if (hasSubmittedRef.current || isSwapPending) {
-      return;
+    // in the same tick as a manual skip) and against completing the step for
+    // an item a pending reorder is about to move.
+    if (hasSubmittedRef.current || isSwapPending || isPostponePending) {
+      return false;
     }
     hasSubmittedRef.current = true;
     setErrorMessage(undefined);
+    // The set is being done here, so a failed postponement is no longer
+    // actionable: leaving its alert up would stack two alerts on a retry.
+    setPostponeErrorMessage(undefined);
     onComplete(values).catch((error: unknown) => {
       console.error("Failed to record the set completion", error);
       // Re-arm the submit guard so the user can retry.
@@ -299,6 +333,7 @@ export function SetScreen({
       setIsCountdownRunning(false);
       setErrorMessage("No se pudo guardar la serie.");
     });
+    return true;
   };
 
   const handleContinue = () => {
@@ -319,13 +354,22 @@ export function SetScreen({
     if (parsedDuration === undefined) {
       return;
     }
-    submitCompletion({ duration: parsedDuration });
+    const didSubmit = submitCompletion({ duration: parsedDuration });
+    // The countdown fires its completion exactly once, so a pending reorder
+    // swallowing it would strand the timer at 00:00. Stopping it hands the set
+    // over to the retry dock, which stays reachable without skipping.
+    if (!didSubmit) {
+      setIsCountdownRunning(false);
+    }
   };
 
   const handleRetryCountdown = () => {
     prepareTimerAudio().catch((error: unknown) => {
       console.error("Failed to prepare timer audio", error);
     });
+    // Restarting the timer settles the failed postponement: the set is being
+    // done here, so its alert is no longer actionable.
+    setPostponeErrorMessage(undefined);
     setIsCountdownRunning(true);
   };
 
@@ -344,15 +388,54 @@ export function SetScreen({
       });
   };
 
+  const runPostponeOperation = (operation: () => Promise<void>) => {
+    const isBusy =
+      hasSubmittedRef.current || isSwapPending || isPostponePending;
+    if (isBusy) {
+      return;
+    }
+    setIsPostponePending(true);
+    setPostponeErrorMessage(undefined);
+    operation()
+      .then(() => {
+        setIsPostponePending(false);
+      })
+      .catch((error: unknown) => {
+        console.error("Failed to reorder the workout plan", error);
+        setIsPostponePending(false);
+        setPostponeErrorMessage("No se pudo aplazar el ejercicio.");
+      });
+  };
+
+  const handlePostpone = () => {
+    runPostponeOperation(onPostpone);
+  };
+
+  const handlePostponedItemSelected = (itemIndex: number) => {
+    runPostponeOperation(() => onPostponedItemSelected(itemIndex));
+  };
+
   const hasAlternatives = step.alternatives.length > 0;
-  const isExerciseChangeDisabled = isSwapPending || isCountdownRunning;
+  const isExerciseChangeDisabled =
+    isSwapPending || isPostponePending || isCountdownRunning;
+  // Duration sets auto-start their countdown, so a running countdown must not
+  // block a postponement: an occupied station is exactly this case.
+  const isPostponeDisabled =
+    isReorderRedundant || isPostponePending || isSwapPending;
+  // The queue stays readable off a block boundary, but a reorder is only legal
+  // at one, so pulling an item forward is not always available.
+  const isPostponedItemDisabled =
+    !canReorderPlan || isPostponePending || isSwapPending;
   const allExerciseKeys = [step.primaryExerciseKey, ...step.alternatives];
   const availableExerciseKeys = allExerciseKeys.filter(
     (exerciseKey) => exerciseKey !== effectiveExerciseKey,
   );
   const isGifVisible = gifUrl !== undefined && gifUrl !== hiddenGifUrl;
   const hasInstructions = instructions !== undefined;
-  const hasExerciseActions = hasInstructions || hasAlternatives;
+  const hasExerciseActions =
+    hasInstructions || hasAlternatives || canReorderPlan;
+  const hasPostponeError = postponeErrorMessage !== undefined;
+  const hasPostponedItems = postponedItems.length > 0;
   const totalStepCount = progressGroups.reduce(
     (count, group) => count + group.stepIndexes.length,
     0,
@@ -362,11 +445,12 @@ export function SetScreen({
   const completedStepIndexSet = new Set(completedStepIndexes);
   const isDurationCountdownVisible =
     !isRepsSet && isCountdownRunning && parsedDuration !== undefined;
+  const hasStoppedDurationSet = errorMessage !== undefined || hasPostponeError;
   const isDurationRetryVisible =
     !isRepsSet &&
     !isCountdownRunning &&
     parsedDuration !== undefined &&
-    errorMessage !== undefined;
+    hasStoppedDurationSet;
 
   return (
     <div className="flex flex-col gap-7 pb-72">
@@ -379,11 +463,19 @@ export function SetScreen({
             size="xs"
             className="-mr-3"
             onClick={onExit}
-            disabled={isSwapPending}
+            disabled={isSwapPending || isPostponePending}
           >
             Salir
           </Button>
         </div>
+        {isCurrentItemPostponed && (
+          <p
+            data-test="set-postponed-eyebrow"
+            className="mb-1 text-[0.625rem] font-semibold tracking-widest text-primary uppercase"
+          >
+            Aplazado
+          </p>
+        )}
         <h2
           data-test="set-exercise-name"
           className="font-heading text-3xl font-semibold leading-tight"
@@ -438,95 +530,150 @@ export function SetScreen({
             ))}
           </div>
         )}
-        {nextExerciseName !== undefined && (
-          <p
-            data-test="set-next-exercise"
-            className="mt-4 truncate text-sm text-muted-foreground"
-          >
-            Siguiente: {nextExerciseName}
-          </p>
+        {(nextExerciseName !== undefined || hasPostponedItems) && (
+          <div className="mt-4 flex flex-col gap-1">
+            {nextExerciseName !== undefined && (
+              <p
+                data-test="set-next-exercise"
+                className="truncate text-sm text-muted-foreground"
+              >
+                Siguiente: {nextExerciseName}
+              </p>
+            )}
+            {hasPostponedItems && (
+              <p
+                data-test="set-postponed-items"
+                className="text-sm text-muted-foreground"
+              >
+                Aplazados ·{" "}
+                {postponedItems.map((postponedItem, index) => (
+                  <Fragment key={postponedItem.itemIndex}>
+                    {index > 0 && ", "}
+                    <button
+                      type="button"
+                      data-test={`set-postponed-item-${postponedItem.itemIndex}`}
+                      className="underline underline-offset-4 outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:no-underline disabled:opacity-60"
+                      disabled={isPostponedItemDisabled}
+                      onClick={() =>
+                        handlePostponedItemSelected(postponedItem.itemIndex)
+                      }
+                    >
+                      {getExerciseName(
+                        exerciseCatalog,
+                        postponedItem.exerciseKey,
+                      )}
+                    </button>
+                  </Fragment>
+                ))}
+              </p>
+            )}
+          </div>
         )}
       </header>
 
-      {hasExerciseActions && (
-        <div className="flex items-center gap-2">
-          {hasInstructions && (
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button
-                  data-test="technique-trigger"
-                  variant="outline"
-                  size="sm"
-                >
-                  Ver técnica
-                </Button>
-              </SheetTrigger>
-              <SheetContent
-                data-test="technique-sheet"
-                side="bottom"
-                className="max-h-[85svh] overflow-hidden pb-[max(1.5rem,env(safe-area-inset-bottom))]"
-              >
-                <SheetHeader
-                  data-test="technique-sheet-header"
-                  className="shrink-0 border-b p-5 pr-16"
-                >
-                  <p className="text-[0.625rem] font-semibold tracking-widest text-primary uppercase">
-                    Ejecución
-                  </p>
-                  <SheetTitle className="text-2xl tracking-normal normal-case">
-                    {exerciseName}
-                  </SheetTitle>
-                  <SheetDescription className="sr-only">
-                    Instrucciones de ejecución de {exerciseName}
-                  </SheetDescription>
-                </SheetHeader>
-                <ol
-                  data-test="technique-sheet-instructions"
-                  className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 text-sm leading-relaxed"
-                >
-                  {instructions.map((instruction, index) => (
-                    <li
-                      // biome-ignore lint/suspicious/noArrayIndexKey: static ordered list, steps can repeat
-                      key={index}
-                      className="flex items-baseline border-b py-4"
+      {(hasExerciseActions || hasPostponeError) && (
+        <div className="flex flex-col gap-2">
+          {hasExerciseActions && (
+            <div className="flex items-center gap-2">
+              {hasInstructions && (
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button
+                      data-test="technique-trigger"
+                      variant="outline"
+                      size="sm"
                     >
-                      <span className="w-8 shrink-0 font-mono text-xs text-primary tabular-nums">
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                      <span className="min-w-0 text-muted-foreground">
-                        {instruction}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              </SheetContent>
-            </Sheet>
-          )}
-          {hasAlternatives && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+                      Ver técnica
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent
+                    data-test="technique-sheet"
+                    side="bottom"
+                    className="max-h-[85svh] overflow-hidden pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+                  >
+                    <SheetHeader
+                      data-test="technique-sheet-header"
+                      className="shrink-0 border-b p-5 pr-16"
+                    >
+                      <p className="text-[0.625rem] font-semibold tracking-widest text-primary uppercase">
+                        Ejecución
+                      </p>
+                      <SheetTitle className="text-2xl tracking-normal normal-case">
+                        {exerciseName}
+                      </SheetTitle>
+                      <SheetDescription className="sr-only">
+                        Instrucciones de ejecución de {exerciseName}
+                      </SheetDescription>
+                    </SheetHeader>
+                    <ol
+                      data-test="technique-sheet-instructions"
+                      className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 text-sm leading-relaxed"
+                    >
+                      {instructions.map((instruction, index) => (
+                        <li
+                          // biome-ignore lint/suspicious/noArrayIndexKey: static ordered list, steps can repeat
+                          key={index}
+                          className="flex items-baseline border-b py-4"
+                        >
+                          <span className="w-8 shrink-0 font-mono text-xs text-primary tabular-nums">
+                            {String(index + 1).padStart(2, "0")}
+                          </span>
+                          <span className="min-w-0 text-muted-foreground">
+                            {instruction}
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                  </SheetContent>
+                </Sheet>
+              )}
+              {hasAlternatives && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      data-test="set-exercise-select"
+                      variant="outline"
+                      size="sm"
+                      disabled={isExerciseChangeDisabled}
+                    >
+                      Alternativas
+                      <ChevronDown />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-auto">
+                    {availableExerciseKeys.map((exerciseKey) => (
+                      <DropdownMenuItem
+                        key={exerciseKey}
+                        data-test={`set-exercise-option-${exerciseKey}`}
+                        onSelect={() => handleExerciseChange(exerciseKey)}
+                      >
+                        {getExerciseName(exerciseCatalog, exerciseKey)}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              {canReorderPlan && (
                 <Button
-                  data-test="set-exercise-select"
+                  data-test="set-postpone"
                   variant="outline"
                   size="sm"
-                  disabled={isExerciseChangeDisabled}
+                  onClick={handlePostpone}
+                  disabled={isPostponeDisabled}
                 >
-                  Alternativas
-                  <ChevronDown />
+                  Aplazar
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-auto">
-                {availableExerciseKeys.map((exerciseKey) => (
-                  <DropdownMenuItem
-                    key={exerciseKey}
-                    data-test={`set-exercise-option-${exerciseKey}`}
-                    onSelect={() => handleExerciseChange(exerciseKey)}
-                  >
-                    {getExerciseName(exerciseCatalog, exerciseKey)}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+              )}
+            </div>
+          )}
+          {hasPostponeError && (
+            <p
+              data-test="set-postpone-error"
+              role="alert"
+              className="text-sm text-destructive"
+            >
+              {postponeErrorMessage}
+            </p>
           )}
         </div>
       )}
@@ -618,7 +765,7 @@ export function SetScreen({
                 data-test="set-previous"
                 variant="outline"
                 onClick={onPrevious}
-                disabled={isFirstStep || isSwapPending}
+                disabled={isFirstStep || isSwapPending || isPostponePending}
               >
                 Anterior
               </Button>

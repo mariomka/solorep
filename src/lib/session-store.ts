@@ -69,6 +69,7 @@ export async function startSession(
     startedAt: now,
     currentStepIndex: 0,
     swaps: {},
+    postponed: [],
     completed: [],
     updatedAt: now,
   });
@@ -166,6 +167,35 @@ export async function recordSwap(
     await db.activeSession.put({
       ...session,
       swaps,
+      updatedAt: Date.now(),
+    });
+  });
+}
+
+/**
+ * Replaces the day's postponement queue with `postponed`: the items moved
+ * behind the rest of the work, in postponement order, landing right before the
+ * day's first cool-down item (at the end of the day when it has none). It
+ * never appends -- the caller
+ * owns the queue (it derives the plan from it) and passes it whole, which is
+ * what keeps the record and the walk from diverging, and repairs a stale
+ * persisted queue on the first write.
+ *
+ * Only the derived item order changes: the pointer, the completed entries, the
+ * swaps, and a running rest are all left alone, which is what keeps the
+ * completed entries' step indexes valid (the caller only reorders blocks at or
+ * above the pointer).
+ */
+export async function setPostponedItems(postponed: number[]): Promise<void> {
+  await db.transaction("rw", db.activeSession, async () => {
+    const session = await db.activeSession.get(ACTIVE_SESSION_ID);
+    if (session === undefined) {
+      throw new Error("No active session to postpone items in.");
+    }
+
+    await db.activeSession.put({
+      ...session,
+      postponed,
       updatedAt: Date.now(),
     });
   });

@@ -119,7 +119,10 @@ Do not invent different list behavior for each screen.
 - Keep the day, exercise name, set count, and overall progress at the top.
 - Keep `Salir` at the top right, outside the primary action dock.
 - Exercise media is frameless and has no redundant figure number or exercise-name caption.
-- Place `Ver técnica` and `Alternativas` together above the media.
+- Place `Ver técnica` and `Alternativas` together above the media. `Aplazar` joins them as a compact outline action, last in the row. It appears only on a `work` item, only at that exercise's first set, only while that set is the furthest the session has reached (so it also stays hidden while an earlier set is being corrected via `Anterior`), and only before the day's first cool-down -- a control that cannot act is noise. Warm-ups and stretches never offer it: they need no machine, and they are single-set items whose first set is also their only one, so without the phase check every stretch would show the button.
+- A postponed exercise lands before the day's cool-down, not at the end of the day. Finishing on a heavy lift after eight stretches is not a workout. It follows that postponing the last work item is a no-op, and the button is disabled there rather than lying about what it would do.
+- `Aplazados` sits under `Siguiente:` (now, next, later reads top to bottom) and lists the postponed exercises. Its names are tappable to pull that exercise forward, so the line wraps instead of truncating -- a clipped name would be unreachable. `Siguiente:` truncates: one name, purely informational. The queue never repeats what `Siguiente:` already names: on the last scheduled block the first queued exercise is the next one, and the same name on two adjacent lines reads like two different exercises.
+- An `Aplazado` eyebrow above the exercise name marks a postponed item while it is being executed.
 - The alternatives menu shows only choices other than the exercise currently displayed. When an alternative is active, the original exercise remains available so the swap is reversible.
 - Weight, repetitions or duration, `Anterior`, and the next action live in a fixed bottom dock so scrolling never hides them.
 - The dock respects safe areas and the page reserves enough bottom space to prevent covered content.

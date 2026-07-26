@@ -113,6 +113,35 @@ test("completes a full session and advances the day pointer", async ({
   await expect(dayACard).not.toContainText("Siguiente");
 });
 
+test("postpones an exercise and keeps the order after a reload", async ({
+  page,
+}) => {
+  await importRoutine(page);
+
+  await page.getByTestId(`routine-card-${routineId}`).click();
+  await page.getByTestId(`day-card-${dayAId}`).click();
+  await page.getByTestId("day-overview-start").click();
+
+  const exerciseName = page.getByTestId("set-exercise-name");
+  const postponedItems = page.getByTestId("set-postponed-items");
+  await expect(exerciseName).toBeVisible();
+  await expect(exerciseName).toHaveText("Press banca");
+
+  await page.getByTestId("set-postpone").click();
+
+  // The bench press block moved to the end of the day: the superset is next.
+  await expect(exerciseName).toHaveText("Curl de bíceps");
+  await expect(postponedItems).toContainText("Press banca");
+
+  // setPostponedItems bumped updatedAt, so the reload auto-resumes the workout.
+  await page.reload();
+
+  // The order is rebuilt from the persisted queue through real IndexedDB.
+  await expect(exerciseName).toBeVisible();
+  await expect(exerciseName).toHaveText("Curl de bíceps");
+  await expect(postponedItems).toContainText("Press banca");
+});
+
 test("auto-resumes a fresh session after a reload and discards it from the list", async ({
   page,
 }) => {

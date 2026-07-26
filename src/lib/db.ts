@@ -43,6 +43,11 @@ export interface ActiveSessionRecord {
   currentStepIndex: number;
   restEndsAt?: number; // epoch ms deadline of the running rest; absent outside rest
   swaps: Record<string, string>; // "itemIndex:memberIndex" -> alternative exercise key
+  // Item indexes moved behind the rest of the work, in postponement order. The
+  // effective item order is derived: pending items in natural order, with these
+  // spliced in right before the day's first `cooldown` item (at the end of the
+  // day when it has none). Absent on in-flight sessions = natural order.
+  postponed?: number[];
   completed: Array<{
     stepIndex: number;
     slotKey: string; // stable planned occurrence: "itemIndex:memberIndex"

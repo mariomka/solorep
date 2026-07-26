@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { z } from "zod";
-import { parseRoutine, routineSchema } from "./routine-schema";
+import {
+  parseRoutine,
+  resolveItemPhase,
+  routineSchema,
+} from "./routine-schema";
 
 type RoutineInput = z.input<typeof routineSchema>;
 
@@ -162,5 +166,59 @@ describe("routineSchema", () => {
     routine.days[0].exercises[1] = { exercise: "plank", rest: 60, sets: [] };
 
     expect(routineSchema.safeParse(routine).success).toBe(false);
+  });
+
+  it("parses a phase on a superset, not only on a plain exercise", () => {
+    const routine = validRoutine();
+    routine.days[0].exercises[1] = {
+      phase: "cooldown",
+      exercise: "plank",
+      rest: 60,
+      sets: [{ duration: 45 }],
+    };
+    const superset = routine.days[0].exercises[2];
+    routine.days[0].exercises[2] = { ...superset, phase: "cooldown" };
+
+    const parsed = parseRoutine(routine);
+
+    expect(parsed.days[0].exercises[1].phase).toBe("cooldown");
+    expect(parsed.days[0].exercises[2].phase).toBe("cooldown");
+  });
+
+  it("rejects a phase outside warmup, work and cooldown", () => {
+    const routine = validRoutine();
+    routine.days[0].exercises[1] = {
+      // A stretch is a cool-down item, not a phase of its own.
+      phase: "stretch" as never,
+      exercise: "plank",
+      rest: 60,
+      sets: [{ duration: 45 }],
+    };
+
+    expect(routineSchema.safeParse(routine).success).toBe(false);
+  });
+});
+
+describe("resolveItemPhase", () => {
+  it("treats an item with no phase as work", () => {
+    const day = parseRoutine(validRoutine()).days[0];
+
+    expect(day.exercises[0].phase).toBeUndefined();
+    expect(resolveItemPhase(day.exercises[0])).toBe("work");
+    expect(resolveItemPhase(day.exercises[2])).toBe("work");
+  });
+
+  it("returns the declared phase", () => {
+    const routine = validRoutine();
+    routine.days[0].exercises[1] = {
+      phase: "warmup",
+      exercise: "plank",
+      rest: 60,
+      sets: [{ duration: 45 }],
+    };
+
+    expect(resolveItemPhase(parseRoutine(routine).days[0].exercises[1])).toBe(
+      "warmup",
+    );
   });
 });

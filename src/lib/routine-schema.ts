@@ -20,6 +20,8 @@ export const setSchema = z.union([repsSetSchema, durationSetSchema]);
 
 const restSchema = z.number().int().nonnegative();
 
+export const dayItemPhaseSchema = z.enum(["warmup", "work", "cooldown"]);
+
 const exerciseFields = {
   exercise: exerciseKeySchema,
   alternatives: z.array(exerciseKeySchema).optional(),
@@ -28,6 +30,7 @@ const exerciseFields = {
 
 export const exerciseEntrySchema = z.strictObject({
   ...exerciseFields,
+  phase: dayItemPhaseSchema.optional(),
   rest: restSchema,
 });
 
@@ -36,6 +39,7 @@ export const supersetMemberSchema = z.strictObject(exerciseFields);
 export const supersetEntrySchema = z
   .strictObject({
     superset: z.array(supersetMemberSchema).min(2),
+    phase: dayItemPhaseSchema.optional(),
     rest: restSchema,
   })
   .refine(
@@ -104,12 +108,22 @@ export const routineSchema = z
   });
 
 export type ExerciseSet = z.infer<typeof setSchema>;
+export type DayItemPhase = z.infer<typeof dayItemPhaseSchema>;
 export type ExerciseEntry = z.infer<typeof exerciseEntrySchema>;
 export type SupersetMember = z.infer<typeof supersetMemberSchema>;
 export type SupersetEntry = z.infer<typeof supersetEntrySchema>;
 export type DayItem = z.infer<typeof dayItemSchema>;
 export type RoutineDay = z.infer<typeof daySchema>;
 export type Routine = z.infer<typeof routineSchema>;
+
+/**
+ * Phase of a day item. An absent `phase` means `work`, so routines authored
+ * before the field existed keep their whole day as work: the phase only ever
+ * narrows what the app treats as warm-up or cool-down.
+ */
+export function resolveItemPhase(item: DayItem): DayItemPhase {
+  return item.phase ?? "work";
+}
 
 export function parseRoutine(data: unknown): Routine {
   return routineSchema.parse(data);

@@ -9,6 +9,7 @@ import {
   it,
   vi,
 } from "vitest";
+import { SetScreen } from "@/components/set-screen";
 import { db } from "@/lib/db";
 import { parseRoutine } from "@/lib/routine-schema";
 import { workoutScreenWakeLock } from "@/lib/screen-wake-lock";
@@ -16,6 +17,7 @@ import { buildDayPlan, swapKey } from "@/lib/session-plan";
 import {
   recordSetCompletion,
   recordSwap,
+  setPostponedItems,
   startSession,
 } from "@/lib/session-store";
 import {
@@ -30,6 +32,9 @@ import { WorkoutScreen } from "./workout-screen";
 vi.mock("@/lib/session-store", { spy: true });
 vi.mock("@/lib/screen-wake-lock", { spy: true });
 vi.mock("@/lib/timer-feedback", { spy: true });
+// Spied, not stubbed: the real screen still renders, and the reorder callbacks
+// it receives can be invoked without the buttons that normally guard them.
+vi.mock("@/components/set-screen", { spy: true });
 
 const routine = parseRoutine(fullbody3d);
 const groupedProgressRoutine = parseRoutine({
@@ -69,6 +74,108 @@ const groupedProgressRoutine = parseRoutine({
           rest: 60,
           sets: [{ duration: 30 }],
         },
+      ],
+    },
+  ],
+});
+
+// Four plain single-set items: every block is one step, so the walk after a
+// reorder is fully observable step by step.
+const fourItemRoutine = parseRoutine({
+  id: "four-items",
+  name: "Four items",
+  exercises: {
+    "item-a": { name: "Ejercicio A" },
+    "item-b": { name: "Ejercicio B" },
+    "item-c": { name: "Ejercicio C" },
+    "item-d": { name: "Ejercicio D" },
+  },
+  days: [
+    {
+      id: "four-item-day",
+      name: "Día de cuatro",
+      exercises: ["item-a", "item-b", "item-c", "item-d"].map((exercise) => ({
+        exercise,
+        rest: 60,
+        sets: [{ reps: 10 }],
+      })),
+    },
+  ],
+});
+
+// A warm-up, three working exercises and a stretch, mirroring the real
+// routines. The warm-up and the stretch are single-set items, which is exactly
+// what the first-set guard alone cannot tell apart from a working exercise.
+// Three work items matter: with only two, postponing one leaves it immediately
+// next, and the queue line correctly de-duplicates against "Siguiente:".
+// Natural plan steps: 0 warm-up, 1-2 belt squat, 3 chest press, 4 row,
+// 5 stretch.
+const phasedRoutine = parseRoutine({
+  id: "phased",
+  name: "Phased",
+  exercises: {
+    "jumping-jacks": { name: "Jumping Jacks" },
+    "belt-squat": { name: "Belt Squat" },
+    "chest-press": { name: "Press de pecho" },
+    row: { name: "Remo" },
+    "quad-stretch": { name: "Estiramiento de cuádriceps" },
+  },
+  days: [
+    {
+      id: "phased-day",
+      name: "Día con fases",
+      exercises: [
+        {
+          phase: "warmup",
+          exercise: "jumping-jacks",
+          rest: 0,
+          sets: [{ reps: 30 }],
+        },
+        {
+          exercise: "belt-squat",
+          rest: 60,
+          sets: [{ reps: 8 }, { reps: 8 }],
+        },
+        { exercise: "chest-press", rest: 60, sets: [{ reps: 10 }] },
+        { exercise: "row", rest: 60, sets: [{ reps: 10 }] },
+        {
+          phase: "cooldown",
+          exercise: "quad-stretch",
+          rest: 0,
+          sets: [{ duration: 30 }],
+        },
+      ],
+    },
+  ],
+});
+
+// Non-canonical phase order: a work item sits AFTER the cool-down, so the
+// queue (which lands before it) can be reached by the pointer while scheduled
+// work is still ahead -- the only shape where the queue holds the exercise on
+// screen and the "Aplazados" line still has a reason to exist.
+const trailingWorkRoutine = parseRoutine({
+  id: "trailing-work",
+  name: "Trailing work",
+  exercises: {
+    "item-a": { name: "Ejercicio A" },
+    "item-b": { name: "Ejercicio B" },
+    "quad-stretch": { name: "Estiramiento de cuádriceps" },
+    "item-c": { name: "Ejercicio C" },
+  },
+  days: [
+    {
+      id: "trailing-work-day",
+      name: "Día con trabajo final",
+      exercises: [
+        { exercise: "item-a", rest: 60, sets: [{ reps: 10 }] },
+        { exercise: "item-b", rest: 60, sets: [{ reps: 10 }] },
+        {
+          phase: "cooldown",
+          exercise: "quad-stretch",
+          rest: 0,
+          sets: [{ duration: 30 }],
+        },
+        { exercise: "item-c", rest: 60, sets: [{ reps: 10 }] },
       ],
     },
   ],
@@ -114,6 +221,18 @@ function renderWorkout(dayIndex = 0) {
     />,
   );
   return { onDayCompleted, onExit, ...view };
+}
+
+/** Mounts the workout alone at a given step, replacing any previous render. */
+async function renderWorkoutAtStep(
+  dayIndex: number,
+  stepIndex: number,
+): Promise<void> {
+  cleanup();
+  await clearDatabase();
+  await seedSession(dayIndex, stepIndex);
+  renderWorkout(dayIndex);
+  await screen.findByTestId("set-exercise-name");
 }
 
 async function seedGroupedProgressSession(
@@ -164,6 +283,86 @@ function renderGroupedProgressWorkout() {
       onExit={vi.fn()}
     />,
   );
+}
+
+async function renderPhasedWorkoutAtStep(stepIndex: number): Promise<void> {
+  cleanup();
+  await clearDatabase();
+  await db.routines.put({
+    id: phasedRoutine.id,
+    routine: phasedRoutine,
+    importedAt: Date.now(),
+  });
+  await startSession(phasedRoutine.id, "phased-day", 0);
+  const shouldFastForward = stepIndex > 0;
+  if (shouldFastForward) {
+    await db.activeSession.update("current", { currentStepIndex: stepIndex });
+  }
+  render(
+    <WorkoutScreen
+      routine={phasedRoutine}
+      dayIndex={0}
+      onDayCompleted={vi.fn()}
+      onExit={vi.fn()}
+    />,
+  );
+  await screen.findByTestId("set-exercise-name");
+}
+
+async function seedFourItemSession(): Promise<void> {
+  await db.routines.put({
+    id: fourItemRoutine.id,
+    routine: fourItemRoutine,
+    importedAt: Date.now(),
+  });
+  await startSession(fourItemRoutine.id, "four-item-day", 0);
+}
+
+function renderFourItemWorkout() {
+  const onDayCompleted = vi.fn();
+  render(
+    <WorkoutScreen
+      routine={fourItemRoutine}
+      dayIndex={0}
+      onDayCompleted={onDayCompleted}
+      onExit={vi.fn()}
+    />,
+  );
+  return { onDayCompleted };
+}
+
+async function renderTrailingWorkWorkout(): Promise<void> {
+  await db.routines.put({
+    id: trailingWorkRoutine.id,
+    routine: trailingWorkRoutine,
+    importedAt: Date.now(),
+  });
+  await startSession(trailingWorkRoutine.id, "trailing-work-day", 0);
+  render(
+    <WorkoutScreen
+      routine={trailingWorkRoutine}
+      dayIndex={0}
+      onDayCompleted={vi.fn()}
+      onExit={vi.fn()}
+    />,
+  );
+  await screen.findByTestId("set-exercise-name");
+}
+
+/** Completes the single set of the exercise currently on screen. */
+async function completeSetOf(
+  user: ReturnType<typeof userEvent.setup>,
+  exerciseName: string,
+): Promise<void> {
+  await waitFor(() => {
+    expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+      exerciseName,
+    );
+  });
+  await waitFor(() => {
+    expect(screen.getByTestId("set-reps-input")).toHaveValue("10");
+  });
+  await user.click(screen.getByTestId("set-continue"));
 }
 
 describe("WorkoutScreen", () => {
@@ -814,6 +1013,362 @@ describe("WorkoutScreen", () => {
     });
   });
 
+  it("postpones the current exercise moving its block, not the pointer", async () => {
+    await seedSession(0);
+    const user = userEvent.setup();
+    renderWorkout();
+
+    await screen.findByTestId("set-exercise-name");
+    await user.click(screen.getByTestId("set-postpone"));
+
+    // Day 1 order becomes bench-press, barbell-row, plank, back-squat.
+    await waitFor(() => {
+      expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+        "Press banca",
+      );
+    });
+    expect(screen.getByTestId("set-progress")).toHaveTextContent(
+      "Serie 1 de 4",
+    );
+    expect(screen.getByTestId("set-postponed-items")).toHaveTextContent(
+      "Sentadilla con barra",
+    );
+
+    const session = await db.activeSession.get("current");
+    expect(session?.postponed).toEqual([0]);
+    expect(session?.currentStepIndex).toBe(0);
+  });
+
+  it("hides Aplazar in the middle of an exercise", async () => {
+    await seedSession(0, 1);
+    renderWorkout();
+
+    await screen.findByTestId("set-exercise-name");
+    expect(screen.queryByTestId("set-postpone")).not.toBeInTheDocument();
+  });
+
+  it("shows Aplazar only on the first member of a superset's first round", async () => {
+    // Day 2: deadlift (4) + overhead-press (3) + lat-pulldown (3) = step 10
+    // starts the biceps/triceps superset, which also ends the day -- so this
+    // asserts the visibility gate, not that the button can act.
+    await renderWorkoutAtStep(1, 10);
+    expect(screen.getByTestId("set-postpone")).toBeInTheDocument();
+
+    // Step 11 is member 1 of the same round.
+    await renderWorkoutAtStep(1, 11);
+    expect(screen.queryByTestId("set-postpone")).not.toBeInTheDocument();
+
+    // Step 12 is member 0 again, but of the second round.
+    await renderWorkoutAtStep(1, 12);
+    expect(screen.queryByTestId("set-postpone")).not.toBeInTheDocument();
+  });
+
+  it("hides Aplazar below the frontier", async () => {
+    await seedSession(0);
+    const user = userEvent.setup();
+    renderWorkout();
+
+    await screen.findByTestId("set-postpone");
+    await user.click(screen.getByTestId("set-continue"));
+    await user.click(await screen.findByTestId("rest-skip"));
+    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
+      "Serie 2 de 4",
+    );
+
+    await user.click(screen.getByTestId("set-previous"));
+
+    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
+      "Serie 1 de 4",
+    );
+    expect(screen.queryByTestId("set-postpone")).not.toBeInTheDocument();
+  });
+
+  it("refuses to reorder the plan when the position cannot reorder it", async () => {
+    // The row is queued, so the jump path has a target to be refused too.
+    await seedSession(0);
+    await db.activeSession.update("current", { postponed: [2] });
+    const user = userEvent.setup();
+    renderWorkout();
+
+    const repsInput = await screen.findByTestId("set-reps-input");
+    await waitFor(() => expect(repsInput).toHaveValue("10"));
+    await user.click(screen.getByTestId("set-continue"));
+    await user.click(await screen.findByTestId("rest-skip"));
+    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
+      "Serie 2 de 4",
+    );
+    expect(screen.queryByTestId("set-postpone")).not.toBeInTheDocument();
+    expect(screen.getByTestId("set-postponed-item-2")).toBeDisabled();
+
+    // The chrome is not the guard: called straight from here, mid-exercise, a
+    // reorder would move the squat's block away from the set already logged
+    // under step 0 and hand that entry to another exercise.
+    const [setScreenProps] = vi.mocked(SetScreen).mock.lastCall ?? [];
+    if (setScreenProps === undefined) {
+      throw new Error("SetScreen was never rendered.");
+    }
+    await act(async () => {
+      await setScreenProps.onPostpone();
+      await setScreenProps.onPostponedItemSelected(2);
+    });
+
+    expect(setPostponedItems).not.toHaveBeenCalled();
+    const session = await db.activeSession.get("current");
+    expect(session?.postponed).toEqual([2]);
+    expect(session?.completed.map((entry) => entry.stepIndex)).toEqual([0]);
+    expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+      "Sentadilla con barra",
+    );
+    expect(screen.getByTestId("set-progress")).toHaveTextContent(
+      "Serie 2 de 4",
+    );
+  });
+
+  it("disables Aplazar on the last remaining block", async () => {
+    // Step 11 starts the plank, the day's last item.
+    await seedSession(0, 11);
+    renderWorkout();
+
+    expect(await screen.findByTestId("set-postpone")).toBeDisabled();
+  });
+
+  it("keeps completed steps in place and reorders the progress groups", async () => {
+    // Squat (2 sets) done; the pointer starts the superset.
+    await seedGroupedProgressSession(2, [0, 1]);
+    const user = userEvent.setup();
+    renderGroupedProgressWorkout();
+
+    await screen.findByTestId("set-postpone");
+    await user.click(screen.getByTestId("set-postpone"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+        "Plank",
+      );
+    });
+    expect(screen.getByTestId("workout-progress-step-0")).toHaveAttribute(
+      "data-state",
+      "completed",
+    );
+    expect(screen.getByTestId("workout-progress-step-0")).toHaveAttribute(
+      "data-group",
+      "0:0",
+    );
+    expect(screen.getByTestId("workout-progress-step-1")).toHaveAttribute(
+      "data-state",
+      "completed",
+    );
+    expect(screen.getByTestId("workout-progress-step-1")).toHaveAttribute(
+      "data-group",
+      "0:0",
+    );
+    // The plank moved up into the postponed superset's place.
+    expect(screen.getByTestId("workout-progress-step-2")).toHaveAttribute(
+      "data-group",
+      "2:0",
+    );
+
+    const session = await db.activeSession.get("current");
+    expect(session?.postponed).toEqual([1]);
+    expect(session?.currentStepIndex).toBe(2);
+    expect(session?.completed.map((entry) => entry.stepIndex)).toEqual([0, 1]);
+  });
+
+  it("pulls a postponed exercise back by postponing everything in front of it", async () => {
+    await seedGroupedProgressSession(0, []);
+    const user = userEvent.setup();
+    renderGroupedProgressWorkout();
+
+    await screen.findByTestId("set-postpone");
+    await user.click(screen.getByTestId("set-postpone"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("set-exercise-name")).toHaveTextContent("Curl");
+    });
+
+    await user.click(screen.getByTestId("set-postponed-item-0"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+        "Squat",
+      );
+    });
+    expect(screen.getByTestId("set-postponed-eyebrow")).toBeInTheDocument();
+    // Every remaining block is postponed now, so the queue line retires.
+    expect(screen.queryByTestId("set-postponed-items")).not.toBeInTheDocument();
+
+    const session = await db.activeSession.get("current");
+    expect(session?.postponed).toEqual([0, 1, 2]);
+    expect(session?.currentStepIndex).toBe(0);
+
+    // Nothing was skipped: the superset still follows the squat's two sets.
+    await user.click(screen.getByTestId("set-continue"));
+    await user.click(await screen.findByTestId("rest-skip"));
+    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
+      "Serie 2 de 2",
+    );
+    await user.click(screen.getByTestId("set-continue"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("set-exercise-name")).toHaveTextContent("Curl");
+    });
+  });
+
+  it("walks every block exactly once after a jump and completes the day on the last one", async () => {
+    await seedFourItemSession();
+    const user = userEvent.setup();
+    const { onDayCompleted } = renderFourItemWorkout();
+
+    await screen.findByTestId("set-postpone");
+    await user.click(screen.getByTestId("set-postpone"));
+
+    // Order is now B, C, D, A with the pointer still at step 0.
+    await waitFor(() => {
+      expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+        "Ejercicio B",
+      );
+    });
+
+    await user.click(screen.getByTestId("set-postponed-item-0"));
+
+    // Pulling A forward pushed B, C and D behind it: natural order again.
+    await waitFor(() => {
+      expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+        "Ejercicio A",
+      );
+    });
+    const jumped = await db.activeSession.get("current");
+    expect(jumped?.postponed).toEqual([0, 1, 2, 3]);
+    expect(jumped?.currentStepIndex).toBe(0);
+
+    await completeSetOf(user, "Ejercicio A");
+    await completeSetOf(user, "Ejercicio B");
+    await completeSetOf(user, "Ejercicio C");
+    // Three of four blocks done: the day is not over yet.
+    expect(onDayCompleted).not.toHaveBeenCalled();
+
+    await completeSetOf(user, "Ejercicio D");
+
+    await waitFor(() => expect(onDayCompleted).toHaveBeenCalledTimes(1));
+    const session = await db.activeSession.get("current");
+    expect(
+      session?.completed.map(({ stepIndex, slotKey }) => ({
+        stepIndex,
+        slotKey,
+      })),
+    ).toEqual([
+      { stepIndex: 0, slotKey: "0:0" },
+      { stepIndex: 1, slotKey: "1:0" },
+      { stepIndex: 2, slotKey: "2:0" },
+      { stepIndex: 3, slotKey: "3:0" },
+    ]);
+  });
+
+  it("leaves the exercise Siguiente already names out of the postponed line", async () => {
+    await seedFourItemSession();
+    const user = userEvent.setup();
+    renderFourItemWorkout();
+
+    await screen.findByTestId("set-postpone");
+    await user.click(screen.getByTestId("set-postpone"));
+    await waitFor(() => {
+      expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+        "Ejercicio B",
+      );
+    });
+    await user.click(screen.getByTestId("set-postpone"));
+
+    // Order is C, D, A, B: both queued blocks sit further away than the next
+    // one, so the queue lists both.
+    await waitFor(() => {
+      expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+        "Ejercicio C",
+      );
+    });
+    expect(screen.getByTestId("set-next-exercise")).toHaveTextContent(
+      "Ejercicio D",
+    );
+    expect(screen.getByTestId("set-postponed-items")).toHaveTextContent(
+      "Aplazados · Ejercicio A, Ejercicio B",
+    );
+
+    await completeSetOf(user, "Ejercicio C");
+
+    // D is the last scheduled block, so "Siguiente:" already names A: printing
+    // it again on the next line would read like two different exercises.
+    await waitFor(() => {
+      expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+        "Ejercicio D",
+      );
+    });
+    expect(screen.getByTestId("set-next-exercise")).toHaveTextContent(
+      "Ejercicio A",
+    );
+    expect(screen.getByTestId("set-postponed-items")).toHaveTextContent(
+      "Aplazados · Ejercicio B",
+    );
+    expect(
+      screen.queryByTestId("set-postponed-item-0"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("set-postponed-item-1")).toBeInTheDocument();
+  });
+
+  it("marks only a postponed exercise with the Aplazado eyebrow", async () => {
+    await seedSession(0);
+    // With item 0 postponed the order is bench-press, barbell-row, plank,
+    // back-squat: step 10 starts the postponed squat.
+    await db.activeSession.update("current", {
+      postponed: [0],
+      currentStepIndex: 10,
+    });
+    renderWorkout();
+
+    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
+      "Sentadilla con barra",
+    );
+    expect(screen.getByTestId("set-postponed-eyebrow")).toBeInTheDocument();
+
+    cleanup();
+
+    await db.activeSession.update("current", { currentStepIndex: 0 });
+    renderWorkout();
+
+    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
+      "Press banca",
+    );
+    expect(
+      screen.queryByTestId("set-postponed-eyebrow"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("rebuilds the postponed order from the persisted queue after a restart", async () => {
+    await seedSession(0);
+    const user = userEvent.setup();
+    renderWorkout();
+
+    await screen.findByTestId("set-exercise-name");
+    await user.click(screen.getByTestId("set-postpone"));
+    await waitFor(() => {
+      expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+        "Press banca",
+      );
+    });
+
+    // Simulate the app being killed and reopened: same database, fresh mount.
+    cleanup();
+    renderWorkout();
+
+    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
+      "Press banca",
+    );
+    expect(screen.getByTestId("set-progress")).toHaveTextContent(
+      "Serie 1 de 4",
+    );
+    expect(screen.getByTestId("set-postponed-items")).toHaveTextContent(
+      "Sentadilla con barra",
+    );
+  });
+
   it("shows an inline error and re-enables Continuar when persisting fails, and a retry succeeds", async () => {
     await seedSession(0);
     const user = userEvent.setup();
@@ -843,5 +1398,110 @@ describe("WorkoutScreen", () => {
     );
     const sessionAfterRetry = await db.activeSession.get("current");
     expect(sessionAfterRetry?.completed).toHaveLength(1);
+  });
+});
+
+describe("day item phases", () => {
+  it("never offers Aplazar on a warm-up or a stretch", async () => {
+    await renderPhasedWorkoutAtStep(0);
+    expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+      "Jumping Jacks",
+    );
+    expect(screen.queryByTestId("set-postpone")).not.toBeInTheDocument();
+
+    await renderPhasedWorkoutAtStep(5);
+    expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+      "Estiramiento de cuádriceps",
+    );
+    expect(screen.queryByTestId("set-postpone")).not.toBeInTheDocument();
+  });
+
+  it("offers Aplazar on a working exercise and disables it on the last one", async () => {
+    await renderPhasedWorkoutAtStep(1);
+    expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+      "Belt Squat",
+    );
+    expect(screen.getByTestId("set-postpone")).toBeEnabled();
+
+    // The row is the last work item: the queue lands exactly where it already
+    // sits, so the button has nothing to move.
+    await renderPhasedWorkoutAtStep(4);
+    expect(screen.getByTestId("set-exercise-name")).toHaveTextContent("Remo");
+    expect(screen.getByTestId("set-postpone")).toBeDisabled();
+  });
+
+  it("lands a postponed exercise before the stretch, not at the end of the day", async () => {
+    const user = userEvent.setup();
+    await renderPhasedWorkoutAtStep(1);
+
+    await user.click(screen.getByTestId("set-postpone"));
+
+    // The next work item takes its place, and the queue is listed as pending.
+    await waitFor(() => {
+      expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+        "Press de pecho",
+      );
+    });
+    expect(screen.getByTestId("set-postponed-items")).toHaveTextContent(
+      "Belt Squat",
+    );
+
+    const session = await db.activeSession.get("current");
+    expect(session?.postponed).toEqual([1]);
+    expect(session?.currentStepIndex).toBe(1);
+
+    // Belt Squat comes back after the other work but before the stretch.
+    const plan = buildDayPlan(phasedRoutine.days[0], session?.postponed);
+    expect(plan.map((step) => step.itemIndex)).toEqual([0, 2, 3, 1, 1, 4]);
+  });
+
+  it("stops listing a postponed exercise once it is the one on screen", async () => {
+    const user = userEvent.setup();
+    await renderPhasedWorkoutAtStep(1);
+    await user.click(screen.getByTestId("set-postpone"));
+    await waitFor(() => {
+      expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+        "Press de pecho",
+      );
+    });
+
+    // Walk the remaining work: the queue becomes the current exercise, so the
+    // line has nothing left to announce and the eyebrow takes over.
+    await completeSetOf(user, "Press de pecho");
+    await completeSetOf(user, "Remo");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+        "Belt Squat",
+      );
+    });
+    expect(screen.queryByTestId("set-postponed-items")).not.toBeInTheDocument();
+    expect(screen.getByTestId("set-postponed-eyebrow")).toBeInTheDocument();
+  });
+
+  it("stops listing a postponed exercise on screen while work still waits behind the stretch", async () => {
+    const user = userEvent.setup();
+    await renderTrailingWorkWorkout();
+
+    // Order becomes B, A, stretch, C: the queue lands before the stretch, so
+    // the work item after it keeps scheduled work ahead of the whole queue.
+    await user.click(screen.getByTestId("set-postpone"));
+    await waitFor(() => {
+      expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+        "Ejercicio B",
+      );
+    });
+
+    // One step later the pointer is on the queued block itself, with C still
+    // scheduled ahead: listing A under "Aplazados" would announce the exercise
+    // being executed.
+    await completeSetOf(user, "Ejercicio B");
+    await waitFor(() => {
+      expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+        "Ejercicio A",
+      );
+    });
+    expect(screen.getByTestId("set-postponed-eyebrow")).toBeInTheDocument();
+    expect(screen.queryByTestId("set-postponed-items")).not.toBeInTheDocument();
   });
 });
