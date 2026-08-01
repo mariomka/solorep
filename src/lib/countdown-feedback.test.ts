@@ -61,6 +61,28 @@ describe("CountdownFeedbackController", () => {
     ]);
   });
 
+  it("plays the start cue outside the duplicate-second guard", async () => {
+    const playFeedback = vi.fn<TimerFeedbackPlayer>(async () => {});
+    const controller = new CountdownFeedbackController(
+      { soundEnabled: true, vibrationEnabled: false },
+      playFeedback,
+    );
+
+    await controller.playStart();
+    await controller.update(5);
+    await controller.playStart();
+
+    expect(playFeedback.mock.calls.map(([cue]) => cue)).toEqual([
+      "start",
+      "countdown",
+      "start",
+    ]);
+    expect(playFeedback).toHaveBeenNthCalledWith(1, "start", {
+      soundEnabled: true,
+      vibrationEnabled: false,
+    });
+  });
+
   it("can reset for a new countdown", async () => {
     const playFeedback = vi.fn<TimerFeedbackPlayer>(async () => {});
     const controller = new CountdownFeedbackController(undefined, playFeedback);

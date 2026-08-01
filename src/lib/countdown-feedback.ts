@@ -36,6 +36,15 @@ export class CountdownFeedbackController {
     this.playFeedback = playFeedback;
   }
 
+  /**
+   * Plays the one-shot cue that marks the beginning of a countdown. It is not
+   * derived from a displayed second, so it never participates in the
+   * duplicate-second guard.
+   */
+  async playStart(): Promise<void> {
+    await this.playFeedback("start", this.preferences);
+  }
+
   async update(remainingSeconds: number): Promise<void> {
     const hasAlreadyHandledSecond =
       remainingSeconds === this.lastRemainingSeconds;

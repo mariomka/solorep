@@ -31,6 +31,26 @@ describe("useCountdownFeedback", () => {
     expect(reset).not.toHaveBeenCalled();
   });
 
+  it("forwards the start cue without touching the second guard", () => {
+    const playStart = vi
+      .spyOn(CountdownFeedbackController.prototype, "playStart")
+      .mockResolvedValue(undefined);
+    const update = vi
+      .spyOn(CountdownFeedbackController.prototype, "update")
+      .mockResolvedValue(undefined);
+    const { result } = renderHook(() => useCountdownFeedback());
+
+    act(() => {
+      result.current.notifyStart();
+      result.current.notifySecond(30);
+    });
+
+    expect(playStart).toHaveBeenCalledOnce();
+    expect(
+      update.mock.calls.map(([remainingSeconds]) => remainingSeconds),
+    ).toEqual([30]);
+  });
+
   it("cancels feedback when the countdown is abandoned", () => {
     vi.spyOn(CountdownFeedbackController.prototype, "update").mockResolvedValue(
       undefined,

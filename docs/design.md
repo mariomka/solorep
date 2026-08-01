@@ -145,6 +145,7 @@ Do not invent different list behavior for each screen.
 - The rest timer may be intentionally oversized; supporting labels remain quiet editorial eyebrows.
 - An active duration countdown keeps exercise media, note, and supporting actions on the page; the timer renders compact inside the fixed bottom dock next to the navigation controls, so guidance and timekeeping are visible together (user-decided: seeing the movement matters more than a giant timer).
 - Duration countdowns start automatically; pause/resume is the primary timer action and must remain visible beside navigation controls.
+- A duration set opens with a `Prepárate` lead-in in the same dock: a silent five-second count with `Empezar ya` as its primary action, so autoplay never starts the effort before you are in position. Its number is muted, not primary -- the color promotion to primary is what says the set is now running (user-decided: the wait needs no sound, only the start does).
 - Summary metrics use the same monospace numeric language and hairline-row structure.
 
 ## Illustration and media

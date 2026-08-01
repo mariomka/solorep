@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { CountdownFeedbackController } from "./countdown-feedback";
 
 export interface CountdownFeedbackControls {
+  notifyStart: () => void;
   notifySecond: (remainingSeconds: number) => void;
   notifyComplete: () => void;
   cancel: () => void;
@@ -31,6 +32,10 @@ export function useCountdownFeedback(): CountdownFeedbackControls {
     [controller],
   );
 
+  const notifyStart = useCallback(() => {
+    controller.playStart().catch(reportFeedbackError);
+  }, [controller]);
+
   const notifySecond = useCallback(
     (remainingSeconds: number) => {
       const isActiveSecond = remainingSeconds > 0;
@@ -51,5 +56,5 @@ export function useCountdownFeedback(): CountdownFeedbackControls {
     controller.reset();
   }, [controller]);
 
-  return { notifySecond, notifyComplete, cancel };
+  return { notifyStart, notifySecond, notifyComplete, cancel };
 }

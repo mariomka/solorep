@@ -1,5 +1,5 @@
 import { ChevronDown } from "lucide-react";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -109,26 +109,107 @@ function parseWeight(rawValue: string): { isValid: boolean; weight?: number } {
     : { isValid: false };
 }
 
-interface DurationCountdownProps {
+/** Silent lead-in that gives you time to get into position. */
+const PREPARATION_SECONDS = 5;
+
+interface BottomDockProps {
+  testId?: string;
+  children: ReactNode;
+}
+
+function BottomDock({ testId, children }: BottomDockProps) {
+  return (
+    <div
+      data-test={testId}
+      className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 supports-backdrop-filter:backdrop-blur-sm"
+    >
+      <div className="mx-auto flex w-full max-w-md flex-col gap-4 pt-4 pr-[max(1.25rem,env(safe-area-inset-right))] pb-[max(1.25rem,env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))]">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+interface PreparationCountdownProps {
+  isFirstStep: boolean;
+  onReady: () => void;
+  onPrevious: () => void;
+}
+
+/**
+ * Deliberately silent: the autoplayed set would otherwise be under way before
+ * you can get into position, and a cue here would compete with the single
+ * start cue that marks the real beginning of the effort.
+ */
+function PreparationCountdown({
+  isFirstStep,
+  onReady,
+  onPrevious,
+}: PreparationCountdownProps) {
+  const remainingSeconds = useCountdown(PREPARATION_SECONDS, onReady);
+
+  return (
+    <BottomDock testId="duration-preparation-screen">
+      <div className="flex items-start justify-between gap-4">
+        <span className="text-[0.625rem] font-semibold tracking-widest text-muted-foreground uppercase">
+          Prepárate
+        </span>
+        <p
+          data-test="duration-preparation-timer"
+          role="timer"
+          aria-live="polite"
+          className="font-heading text-5xl font-black leading-none tracking-tight text-muted-foreground tabular-nums"
+        >
+          {remainingSeconds}
+        </p>
+      </div>
+      <div className="flex gap-2">
+        <Button
+          data-test="set-previous"
+          variant="outline"
+          onClick={onPrevious}
+          disabled={isFirstStep}
+        >
+          Anterior
+        </Button>
+        <Button
+          data-test="duration-preparation-start"
+          className="flex-1"
+          onClick={onReady}
+        >
+          Empezar ya
+        </Button>
+      </div>
+    </BottomDock>
+  );
+}
+
+interface RunningCountdownProps {
   seconds: number;
   isFirstStep: boolean;
   onFinished: () => void;
   onPrevious: () => void;
 }
 
-function DurationCountdown({
+function RunningCountdown({
   seconds,
   isFirstStep,
   onFinished,
   onPrevious,
-}: DurationCountdownProps) {
+}: RunningCountdownProps) {
   const [isPaused, setIsPaused] = useState(false);
-  const { notifySecond, notifyComplete, cancel } = useCountdownFeedback();
+  const { notifyStart, notifySecond, notifyComplete, cancel } =
+    useCountdownFeedback();
   const handleTimerFinished = () => {
     notifyComplete();
     onFinished();
   };
   const remainingSeconds = useCountdown(seconds, handleTimerFinished, isPaused);
+  // Mounting is the instant the effort begins, whether the preparation ran out
+  // or was cut short, so this is the one place the start cue belongs.
+  useEffect(() => {
+    notifyStart();
+  }, [notifyStart]);
   useEffect(() => {
     notifySecond(remainingSeconds);
   }, [notifySecond, remainingSeconds]);
@@ -156,53 +237,86 @@ function DurationCountdown({
   };
 
   return (
-    <div
-      data-test="duration-countdown-screen"
-      className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 supports-backdrop-filter:backdrop-blur-sm"
-    >
-      <div className="mx-auto flex w-full max-w-md flex-col gap-4 pt-4 pr-[max(1.25rem,env(safe-area-inset-right))] pb-[max(1.25rem,env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))]">
-        <div className="flex items-start justify-between gap-4">
-          <span className="text-[0.625rem] font-semibold tracking-widest text-muted-foreground uppercase">
-            Temporizador
-          </span>
-          <p
-            data-test="duration-timer"
-            role="timer"
-            aria-live="polite"
-            className={cn(
-              "font-mono text-4xl font-medium leading-none tracking-tight text-primary tabular-nums",
-              isFinalCountdown && "font-heading text-5xl font-black",
-            )}
-          >
-            {countdownText}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            data-test="set-previous"
-            variant="outline"
-            onClick={onPrevious}
-            disabled={isFirstStep}
-          >
-            Anterior
-          </Button>
-          <Button
-            data-test="duration-pause"
-            className="flex-1"
-            onClick={handlePauseToggle}
-          >
-            {isPaused ? "Reanudar" : "Pausar"}
-          </Button>
-          <Button
-            data-test="duration-skip"
-            variant="outline"
-            onClick={handleSkip}
-          >
-            Saltar
-          </Button>
-        </div>
+    <BottomDock testId="duration-countdown-screen">
+      <div className="flex items-start justify-between gap-4">
+        <span className="text-[0.625rem] font-semibold tracking-widest text-muted-foreground uppercase">
+          Temporizador
+        </span>
+        <p
+          data-test="duration-timer"
+          role="timer"
+          aria-live="polite"
+          className={cn(
+            "font-mono text-4xl font-medium leading-none tracking-tight text-primary tabular-nums",
+            isFinalCountdown && "font-heading text-5xl font-black",
+          )}
+        >
+          {countdownText}
+        </p>
       </div>
-    </div>
+      <div className="flex gap-2">
+        <Button
+          data-test="set-previous"
+          variant="outline"
+          onClick={onPrevious}
+          disabled={isFirstStep}
+        >
+          Anterior
+        </Button>
+        <Button
+          data-test="duration-pause"
+          className="flex-1"
+          onClick={handlePauseToggle}
+        >
+          {isPaused ? "Reanudar" : "Pausar"}
+        </Button>
+        <Button
+          data-test="duration-skip"
+          variant="outline"
+          onClick={handleSkip}
+        >
+          Saltar
+        </Button>
+      </div>
+    </BottomDock>
+  );
+}
+
+interface DurationCountdownProps {
+  seconds: number;
+  isFirstStep: boolean;
+  onFinished: () => void;
+  onPrevious: () => void;
+}
+
+function DurationCountdown({
+  seconds,
+  isFirstStep,
+  onFinished,
+  onPrevious,
+}: DurationCountdownProps) {
+  const [isPreparing, setIsPreparing] = useState(true);
+
+  // Two components rather than one phase-switched countdown: each phase owns
+  // its own timer instance, so a duration equal to the preparation length
+  // cannot be mistaken for an unchanged countdown and skip its restart.
+  if (isPreparing) {
+    return (
+      <PreparationCountdown
+        isFirstStep={isFirstStep}
+        onReady={() => setIsPreparing(false)}
+        onPrevious={onPrevious}
+      />
+    );
+  }
+
+  return (
+    <RunningCountdown
+      seconds={seconds}
+      isFirstStep={isFirstStep}
+      onFinished={onFinished}
+      onPrevious={onPrevious}
+    />
   );
 }
 
@@ -727,85 +841,83 @@ export function SetScreen({
       )}
 
       {!isDurationCountdownVisible && (isRepsSet || isDurationRetryVisible) && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 supports-backdrop-filter:backdrop-blur-sm">
-          <div className="mx-auto flex w-full max-w-md flex-col gap-4 pt-4 pr-[max(1.25rem,env(safe-area-inset-right))] pb-[max(1.25rem,env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))]">
-            {isRepsSet && (
-              <div className="flex gap-3">
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <label
-                    htmlFor="set-weight"
-                    className="text-[0.625rem] font-semibold tracking-widest text-muted-foreground uppercase"
-                  >
-                    Peso (kg)
-                  </label>
-                  <Input
-                    id="set-weight"
-                    data-test="set-weight-input"
-                    inputMode="decimal"
-                    value={weightInput}
-                    className="h-14 font-heading text-3xl font-semibold tabular-nums md:text-3xl"
-                    onChange={(event) => setWeightInput(event.target.value)}
-                  />
-                </div>
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <label
-                    htmlFor="set-reps"
-                    className="text-[0.625rem] font-semibold tracking-widest text-muted-foreground uppercase"
-                  >
-                    Repeticiones
-                  </label>
-                  <Input
-                    id="set-reps"
-                    data-test="set-reps-input"
-                    inputMode="numeric"
-                    value={repsInput}
-                    className="h-14 font-heading text-3xl font-semibold tabular-nums md:text-3xl"
-                    onChange={(event) => setRepsInput(event.target.value)}
-                  />
-                </div>
-              </div>
-            )}
-            {errorMessage !== undefined && (
-              <p
-                data-test="set-error"
-                role="alert"
-                className="text-sm text-destructive"
-              >
-                {errorMessage}
-              </p>
-            )}
-            <div className="flex gap-2">
-              <Button
-                data-test="set-previous"
-                variant="outline"
-                onClick={onPrevious}
-                disabled={isFirstStep || isSwapPending || isPostponePending}
-              >
-                Anterior
-              </Button>
-              {isRepsSet ? (
-                <Button
-                  data-test="set-continue"
-                  className="flex-1"
-                  onClick={handleContinue}
-                  disabled={!canContinue}
+        <BottomDock>
+          {isRepsSet && (
+            <div className="flex gap-3">
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <label
+                  htmlFor="set-weight"
+                  className="text-[0.625rem] font-semibold tracking-widest text-muted-foreground uppercase"
                 >
-                  Continuar
-                </Button>
-              ) : (
-                isDurationRetryVisible && (
-                  <Button
-                    data-test="duration-retry"
-                    className="flex-1"
-                    onClick={handleRetryCountdown}
-                  >
-                    Reintentar
-                  </Button>
-                )
-              )}
+                  Peso (kg)
+                </label>
+                <Input
+                  id="set-weight"
+                  data-test="set-weight-input"
+                  inputMode="decimal"
+                  value={weightInput}
+                  className="h-14 font-heading text-3xl font-semibold tabular-nums md:text-3xl"
+                  onChange={(event) => setWeightInput(event.target.value)}
+                />
+              </div>
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <label
+                  htmlFor="set-reps"
+                  className="text-[0.625rem] font-semibold tracking-widest text-muted-foreground uppercase"
+                >
+                  Repeticiones
+                </label>
+                <Input
+                  id="set-reps"
+                  data-test="set-reps-input"
+                  inputMode="numeric"
+                  value={repsInput}
+                  className="h-14 font-heading text-3xl font-semibold tabular-nums md:text-3xl"
+                  onChange={(event) => setRepsInput(event.target.value)}
+                />
+              </div>
             </div>
+          )}
+          {errorMessage !== undefined && (
+            <p
+              data-test="set-error"
+              role="alert"
+              className="text-sm text-destructive"
+            >
+              {errorMessage}
+            </p>
+          )}
+          <div className="flex gap-2">
+            <Button
+              data-test="set-previous"
+              variant="outline"
+              onClick={onPrevious}
+              disabled={isFirstStep || isSwapPending || isPostponePending}
+            >
+              Anterior
+            </Button>
+            {isRepsSet ? (
+              <Button
+                data-test="set-continue"
+                className="flex-1"
+                onClick={handleContinue}
+                disabled={!canContinue}
+              >
+                Continuar
+              </Button>
+            ) : (
+              isDurationRetryVisible && (
+                <Button
+                  data-test="duration-retry"
+                  className="flex-1"
+                  onClick={handleRetryCountdown}
+                >
+                  Reintentar
+                </Button>
+              )
+            )}
           </div>
-        </div>
+        </BottomDock>
       )}
     </div>
   );

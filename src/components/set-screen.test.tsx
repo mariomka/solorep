@@ -128,6 +128,7 @@ describe("SetScreen", () => {
 
     // On a duration step the dock belongs to the countdown, so an alert inside
     // it would be unreachable.
+    await user.click(await screen.findByTestId("duration-preparation-start"));
     const dock = await screen.findByTestId("duration-countdown-screen");
 
     await user.click(screen.getByTestId("set-postpone"));
@@ -204,6 +205,7 @@ describe("SetScreen", () => {
       onPostpone: neverResolvingPostpone(),
     });
 
+    await user.click(await screen.findByTestId("duration-preparation-start"));
     await screen.findByTestId("duration-countdown-screen");
     await user.click(screen.getByTestId("set-postpone"));
 
@@ -221,12 +223,14 @@ describe("SetScreen", () => {
   });
 
   it("keeps Aplazar enabled while a duration countdown runs", async () => {
+    const user = userEvent.setup();
     renderSetScreen(
       vi.fn(async () => {}),
       durationStepWithAlternatives,
       { canReorderPlan: true },
     );
 
+    await user.click(await screen.findByTestId("duration-preparation-start"));
     await screen.findByTestId("duration-countdown-screen");
 
     expect(screen.getByTestId("set-postpone")).toBeEnabled();
@@ -250,6 +254,7 @@ describe("SetScreen", () => {
       onPostpone,
     });
 
+    await user.click(await screen.findByTestId("duration-preparation-start"));
     await screen.findByTestId("duration-countdown-screen");
     await user.click(screen.getByTestId("set-postpone"));
     await waitFor(
@@ -268,8 +273,10 @@ describe("SetScreen", () => {
     // Recoverable without skipping the set.
     await user.click(await screen.findByTestId("duration-retry"));
 
+    // The retry re-arms the lead-in: the set was interrupted, so getting back
+    // into position is part of doing it again.
     expect(
-      await screen.findByTestId("duration-countdown-screen"),
+      await screen.findByTestId("duration-preparation-screen"),
     ).toBeInTheDocument();
     expect(screen.queryByTestId("set-postpone-error")).not.toBeInTheDocument();
     expect(onComplete).not.toHaveBeenCalled();
@@ -289,12 +296,48 @@ describe("SetScreen", () => {
     expect(screen.getByTestId("set-exercise-note")).toBeInTheDocument();
   });
 
+  it("holds a duration set behind a five-second lead-in before the countdown", async () => {
+    renderSetScreen(
+      vi.fn(async () => {}),
+      durationStep,
+    );
+
+    expect(
+      await screen.findByTestId("duration-preparation-screen"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("duration-preparation-timer")).toHaveTextContent(
+      "5",
+    );
+    // The real countdown must not be running yet.
+    expect(
+      screen.queryByTestId("duration-countdown-screen"),
+    ).not.toBeInTheDocument();
+    // Getting into position needs the media, and going back must stay possible.
+    expect(screen.getByTestId("set-exercise-gif")).toBeInTheDocument();
+    expect(screen.getByTestId("set-previous")).toBeInTheDocument();
+
+    expect(
+      await screen.findByTestId(
+        "duration-countdown-screen",
+        {},
+        { timeout: 6_000 },
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("duration-timer")).toHaveTextContent("00:30");
+    expect(
+      screen.queryByTestId("duration-preparation-screen"),
+    ).not.toBeInTheDocument();
+  }, 10_000);
+
   it("starts a compact duration countdown automatically and toggles pause", async () => {
     const user = userEvent.setup();
     renderSetScreen(
       vi.fn(async () => {}),
       durationStep,
     );
+
+    // Cutting the lead-in short starts the set immediately.
+    await user.click(await screen.findByTestId("duration-preparation-start"));
 
     expect(
       await screen.findByTestId("duration-countdown-screen"),

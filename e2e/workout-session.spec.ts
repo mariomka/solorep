@@ -67,10 +67,16 @@ test("completes a full session and advances the day pointer", async ({
   await expect(exerciseName).toHaveText("Extensión de tríceps");
   await continueButton.click();
 
-  // Duration set: the countdown starts automatically in the fixed bottom
-  // dock while the exercise note stays on the page.
+  // Duration set: a silent five-second lead-in runs first, then the countdown
+  // starts automatically in the fixed bottom dock while the note stays visible.
   await expect(exerciseName).toBeVisible();
   await expect(exerciseName).toHaveText("Plancha");
+  // A tick may already have elapsed, so pin the range instead of the first
+  // value: this stays a short single-digit lead-in, not the set's own timer.
+  await expect(page.getByTestId("duration-preparation-timer")).toHaveText(
+    /^[1-5]$/,
+  );
+  await page.getByTestId("duration-preparation-start").click();
   await expect(page.getByTestId("duration-countdown-screen")).toBeVisible();
   await expect(page.getByTestId("set-exercise-note")).toContainText(
     "Aprieta abdomen y glúteos",

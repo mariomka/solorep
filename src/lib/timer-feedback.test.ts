@@ -110,6 +110,27 @@ describe("timer feedback", () => {
     expect(vibrate).toHaveBeenCalledExactlyOnceWith(35);
   });
 
+  it("plays a single high start cue, longer than a countdown tick", async () => {
+    const { playTimerFeedback } = await import("./timer-feedback");
+
+    await playTimerFeedback("start");
+
+    const { gains, oscillators } = audioContexts[0];
+    expect(oscillators).toHaveLength(1);
+    expect(oscillators[0].frequency.setValueAtTime).toHaveBeenCalledWith(
+      1320,
+      10,
+    );
+    expect(oscillators[0].start).toHaveBeenCalledWith(10);
+    expect(oscillators[0].stop).toHaveBeenCalledWith(10.18);
+    expect(gains[0].gain.exponentialRampToValueAtTime).toHaveBeenNthCalledWith(
+      1,
+      0.55,
+      10.005,
+    );
+    expect(vibrate).toHaveBeenCalledExactlyOnceWith(60);
+  });
+
   it("plays a rising two-tone completion cue and distinct vibration", async () => {
     const { playTimerFeedback } = await import("./timer-feedback");
 

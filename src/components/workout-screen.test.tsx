@@ -954,11 +954,23 @@ describe("WorkoutScreen", () => {
     // starts the plank. Its first set is shortened in the routine itself:
     // durations come from the plan, so history cannot speed the test up.
     await seedShortPlankSession(11);
+    const user = userEvent.setup();
     renderShortPlankWorkout();
 
     expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
       "Plancha",
     );
+    // The lead-in is silent on purpose: nothing may sound before the effort.
+    await screen.findByTestId("duration-preparation-screen");
+    expect(playTimerFeedback).not.toHaveBeenCalled();
+
+    await user.click(screen.getByTestId("duration-preparation-start"));
+
+    // One cue marks the beginning of the hold, then the countdown takes over.
+    expect(playTimerFeedback).toHaveBeenNthCalledWith(1, "start", {
+      soundEnabled: true,
+      vibrationEnabled: true,
+    });
     expect(await screen.findByTestId("duration-timer")).toHaveTextContent("1");
     expect(playTimerFeedback).toHaveBeenLastCalledWith("countdown", {
       soundEnabled: true,
@@ -990,6 +1002,7 @@ describe("WorkoutScreen", () => {
     const user = userEvent.setup();
     renderWorkout();
 
+    await user.click(await screen.findByTestId("duration-preparation-start"));
     await user.click(await screen.findByTestId("duration-skip"));
 
     expect(stopTimerFeedback).toHaveBeenCalled();

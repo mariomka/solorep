@@ -4,7 +4,8 @@
 
 - `src/lib/use-countdown.ts` owns timekeeping. It derives remaining time from a fixed wall-clock deadline, so delayed intervals do not introduce drift, and preserves the exact remaining milliseconds across pause/resume.
 - `src/lib/timer-feedback.ts` owns synthesized Web Audio cues, vibration, audio-session progressive enhancement, and cancellation.
-- `src/lib/countdown-feedback.ts` maps displayed seconds to cues and prevents duplicate playback. A jump after suspension plays only the current cue, never every missed second.
+- `src/lib/countdown-feedback.ts` maps displayed seconds to cues and prevents duplicate playback. A jump after suspension plays only the current cue, never every missed second. The start cue is one-shot and sits outside that guard.
+- `src/components/set-screen.tsx` owns the duration-set lead-in: two sibling countdown components, never one phase-switched timer, so each phase gets its own `useCountdown` instance. Sharing one instance would let a duration equal to the lead-in length read as an unchanged `seconds` prop and skip its restart.
 - `src/lib/screen-wake-lock.ts` owns the Screen Wake Lock lifecycle independently from countdown and audio logic.
 
 Timer completion must never depend on audio, vibration, or Wake Lock succeeding. All three capabilities degrade silently.
@@ -13,10 +14,14 @@ Timer completion must never depend on audio, vibration, or Wake Lock succeeding.
 
 | Event | Audio | Vibration |
 | --- | --- | --- |
+| Duration-set lead-in (5 seconds) | silent | none |
+| Duration-set start | 1320 Hz triangle wave, 180 ms | 60 ms |
 | Seconds 5 through 1 | 880 Hz triangle wave, 75 ms | 35 ms |
 | Completion | 880 Hz for 100 ms, then 1320 Hz for 160 ms | 80 ms, 50 ms pause, 140 ms |
 
-Countdown tones use a 0.45 peak gain and the completion cue uses 0.55. Both use a 5 ms attack and exponential decay to stay audible without speaker clicks. They are synthesized at runtime: no audio asset, fetch, decode, or offline cache is required.
+The lead-in is silent by contract: a cue there would compete with the start cue, which is the only marker of the instant the effort begins. The start cue is a single high note, deliberately longer than a countdown tick so it cannot be mistaken for one.
+
+Countdown tones use a 0.45 peak gain; the start and completion cues use 0.55. Both use a 5 ms attack and exponential decay to stay audible without speaker clicks. They are synthesized at runtime: no audio asset, fetch, decode, or offline cache is required.
 
 The default preference enables both sound and vibration, but consumers receive independent `soundEnabled` and `vibrationEnabled` flags. Do not collapse them into one setting.
 
@@ -24,12 +29,13 @@ The default preference enables both sound and vibration, but consumers receive i
 
 The UI integration is intentionally thin:
 
-1. Duration sets start automatically as soon as their persisted or planned duration is loaded. Pausing freezes the exact remaining time; resuming continues from that instant rather than restarting the displayed second.
-2. Call `prepareTimerAudio()` from trusted gestures that can lead to an automatic countdown: selecting a day, resuming a session, and `Continuar`. Call it again from `Reanudar` after a pause. Browsers may keep a new `AudioContext` suspended without prior interaction. Auto-resume on launch has no gesture, so its countdown may stay silent until the first touch — accepted degradation, never block timing on it.
-3. Use one `useCountdownFeedback()` instance per visible countdown. It owns a `CountdownFeedbackController` and its cleanup.
-4. Pass each changed positive `remainingSeconds` value to `notifySecond()` and call `notifyComplete()` at `0` before navigating away. Repeated values are ignored.
-5. Call `cancel()` when the user pauses, skips, or exits. Natural completion deliberately leaves its short final cue alive across navigation.
-6. Call `workoutScreenWakeLock.acquire()` while the workout execution route is active. Call `release()` before summary, exit, or discard.
+1. Duration sets run a silent five-second lead-in as soon as their persisted or planned duration is loaded, then the countdown starts automatically. `Empezar ya` cuts the lead-in short. Pausing freezes the exact remaining time; resuming continues from that instant rather than restarting the displayed second.
+2. Call `notifyStart()` once when the real countdown begins -- from the countdown component's mount, so the natural end of the lead-in and `Empezar ya` share one path. Retrying a stranded set re-arms the lead-in.
+3. Call `prepareTimerAudio()` from trusted gestures that can lead to an automatic countdown: selecting a day, resuming a session, and `Continuar`. Call it again from `Reanudar` after a pause. Browsers may keep a new `AudioContext` suspended without prior interaction. Auto-resume on launch has no gesture, so its countdown may stay silent until the first touch — accepted degradation, never block timing on it.
+4. Use one `useCountdownFeedback()` instance per visible countdown. It owns a `CountdownFeedbackController` and its cleanup.
+5. Pass each changed positive `remainingSeconds` value to `notifySecond()` and call `notifyComplete()` at `0` before navigating away. Repeated values are ignored.
+6. Call `cancel()` when the user pauses, skips, or exits. Natural completion deliberately leaves its short final cue alive across navigation.
+7. Call `workoutScreenWakeLock.acquire()` while the workout execution route is active. Call `release()` before summary, exit, or discard.
 
 Keep `useCountdown` free of sound and platform APIs. Timing is required behavior; feedback is optional behavior.
 

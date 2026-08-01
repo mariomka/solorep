@@ -1,4 +1,4 @@
-export type TimerFeedbackCue = "countdown" | "complete";
+export type TimerFeedbackCue = "start" | "countdown" | "complete";
 
 export interface TimerFeedbackPreferences {
   soundEnabled: boolean;
@@ -27,8 +27,19 @@ const MINIMUM_GAIN = 0.0001;
 const ATTACK_SECONDS = 0.005;
 const COUNTDOWN_PEAK_GAIN = 0.45;
 const COMPLETION_PEAK_GAIN = 0.55;
+const START_PEAK_GAIN = 0.55;
 
 const TONES: Record<TimerFeedbackCue, ToneDefinition[]> = {
+  // A single high note, longer than a countdown tick: it marks the instant the
+  // effort begins, so it must not be mistaken for one of the 5-to-1 ticks.
+  start: [
+    {
+      frequencyHz: 1320,
+      delaySeconds: 0,
+      durationSeconds: 0.18,
+      peakGain: START_PEAK_GAIN,
+    },
+  ],
   countdown: [
     {
       frequencyHz: 880,
@@ -54,6 +65,7 @@ const TONES: Record<TimerFeedbackCue, ToneDefinition[]> = {
 };
 
 const VIBRATION_PATTERNS: Record<TimerFeedbackCue, number | number[]> = {
+  start: 60,
   countdown: 35,
   complete: [80, 50, 140],
 };
