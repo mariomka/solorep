@@ -20,7 +20,7 @@ import { type ActiveSessionRecord, db } from "@/lib/db";
 import { useExerciseInstructions } from "@/lib/exercise-instructions";
 import { getExerciseGifUrl } from "@/lib/exercise-media";
 import { formatCountdown } from "@/lib/format-countdown";
-import type { Routine } from "@/lib/routine-schema";
+import type { DayItemPhase, Routine } from "@/lib/routine-schema";
 import {
   type LoggedSetValues,
   resolvePrefill,
@@ -36,6 +36,7 @@ export type CompletedSetEntry = ActiveSessionRecord["completed"][number];
 
 export interface WorkoutProgressGroup {
   groupKey: string;
+  phase: DayItemPhase;
   stepIndexes: number[];
 }
 
@@ -494,39 +495,53 @@ export function SetScreen({
         </div>
         {hasSessionProgress && (
           <div className="mt-5 flex gap-1" aria-hidden="true">
-            {progressGroups.map((group) => (
-              <div
-                key={group.groupKey}
-                data-test={`workout-progress-group-${group.groupKey}`}
-                className="flex min-w-0 basis-0 gap-px"
-                style={{ flexGrow: group.stepIndexes.length }}
-              >
-                {group.stepIndexes.map((progressStepIndex) => {
-                  const isCompleted =
-                    completedStepIndexSet.has(progressStepIndex);
-                  const isCurrent = progressStepIndex === currentStepIndex;
-                  const progressState = isCurrent
-                    ? "current"
-                    : isCompleted
-                      ? "completed"
-                      : "pending";
-                  const isFilled = progressState !== "pending";
+            {progressGroups.map((group, groupIndex) => {
+              const previousGroup = progressGroups[groupIndex - 1];
+              // A phase change gets a wider gap than an exercise change, so the
+              // warm-up and the stretches read as blocks instead of melting
+              // into the work that precedes them.
+              const startsPhase =
+                previousGroup !== undefined &&
+                previousGroup.phase !== group.phase;
 
-                  return (
-                    <span
-                      key={progressStepIndex}
-                      data-test={`workout-progress-step-${progressStepIndex}`}
-                      data-group={group.groupKey}
-                      data-state={progressState}
-                      className={cn(
-                        "h-1 flex-1",
-                        isFilled ? "bg-primary" : "bg-border",
-                      )}
-                    />
-                  );
-                })}
-              </div>
-            ))}
+              return (
+                <div
+                  key={group.groupKey}
+                  data-test={`workout-progress-group-${group.groupKey}`}
+                  data-phase={group.phase}
+                  className={cn(
+                    "flex min-w-0 basis-0 gap-px",
+                    startsPhase && "ml-2",
+                  )}
+                  style={{ flexGrow: group.stepIndexes.length }}
+                >
+                  {group.stepIndexes.map((progressStepIndex) => {
+                    const isCompleted =
+                      completedStepIndexSet.has(progressStepIndex);
+                    const isCurrent = progressStepIndex === currentStepIndex;
+                    const progressState = isCurrent
+                      ? "current"
+                      : isCompleted
+                        ? "completed"
+                        : "pending";
+                    const isFilled = progressState !== "pending";
+
+                    return (
+                      <span
+                        key={progressStepIndex}
+                        data-test={`workout-progress-step-${progressStepIndex}`}
+                        data-group={group.groupKey}
+                        data-state={progressState}
+                        className={cn(
+                          "h-1 flex-1",
+                          isFilled ? "bg-primary" : "bg-border",
+                        )}
+                      />
+                    );
+                  })}
+                </div>
+              );
+            })}
           </div>
         )}
         {(nextExerciseName !== undefined || hasPostponedItems) && (

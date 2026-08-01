@@ -136,7 +136,7 @@ Do not invent different list behavior for each screen.
 - Warm-ups and stretches collapse per contiguous run into a single group instead. A dozen single-set items would otherwise shatter the bar into slivers that say nothing.
 - Each group contains one segment per set.
 - Completed and current segments use the primary color; pending segments use the border color.
-- Small gaps separate sets and larger gaps separate exercise groups.
+- Spacing has three tiers: small gaps separate sets, larger gaps separate exercise groups, and a wider gap still separates phases. Without the phase tier the stretches read as one more exercise glued to the end of the work instead of a block of their own.
 - This communicates both position within an exercise and position within the session without extra copy.
 
 ### Timers and summary data

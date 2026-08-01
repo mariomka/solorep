@@ -1694,4 +1694,22 @@ describe("progress bar phase grouping", () => {
     const workGroupKeys = [2, 3, 4, 5, 6, 7].map((step) => groupKeys[step]);
     expect(new Set(workGroupKeys).size).toBe(3);
   });
+
+  it("separates a phase change with a wider gap than an exercise change", async () => {
+    await renderPhasedProgress();
+
+    const groups = screen.getAllByTestId(/^workout-progress-group-/);
+    const separationByGroup = groups.map((group) => ({
+      phase: group.getAttribute("data-phase"),
+      // The extra margin adds to the gap every group already carries.
+      hasPhaseGap: group.classList.contains("ml-2"),
+    }));
+    expect(separationByGroup).toEqual([
+      { phase: "warmup", hasPhaseGap: false },
+      { phase: "work", hasPhaseGap: true },
+      { phase: "work", hasPhaseGap: false },
+      { phase: "work", hasPhaseGap: false },
+      { phase: "cooldown", hasPhaseGap: true },
+    ]);
+  });
 });

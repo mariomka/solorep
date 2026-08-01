@@ -233,7 +233,7 @@ function WorkoutSessionView({
   // a superset's members alternate (A1 B1 A2 B2), so its steps are not
   // contiguous and a run would split one exercise into several groups.
   const progressGroups = useMemo(() => {
-    const stepIndexesByGroup = new Map<string, number[]>();
+    const groupsByKey = new Map<string, WorkoutProgressGroup>();
     let previousPhase: DayItemPhase | undefined;
     let currentRunKey = "";
     let runCount = 0;
@@ -255,18 +255,19 @@ function WorkoutSessionView({
       }
       previousPhase = phase;
 
-      const existingStepIndexes = stepIndexesByGroup.get(groupKey) ?? [];
-      existingStepIndexes.push(planStepIndex);
-      stepIndexesByGroup.set(groupKey, existingStepIndexes);
+      const existingGroup = groupsByKey.get(groupKey);
+      if (existingGroup === undefined) {
+        groupsByKey.set(groupKey, {
+          groupKey,
+          phase,
+          stepIndexes: [planStepIndex],
+        });
+        return;
+      }
+      existingGroup.stepIndexes.push(planStepIndex);
     });
 
-    return Array.from(
-      stepIndexesByGroup,
-      ([groupKey, stepIndexes]): WorkoutProgressGroup => ({
-        groupKey,
-        stepIndexes,
-      }),
-    );
+    return Array.from(groupsByKey.values());
   }, [day, plan]);
 
   const completedStepIndexes = Object.values(state.completed).map(
