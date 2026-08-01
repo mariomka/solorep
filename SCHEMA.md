@@ -41,9 +41,11 @@ The contract between routine-authoring agents and the app. Validated with Zod on
           "alternatives": ["dumbbell-press"],
           "rest": 90,               // seconds between sets
           "sets": [
-            { "reps": 12, "weight": 20 },
+            // Reps vary per set; weight stays flat -- it is a per-exercise
+            // value at runtime, so a ramp would not survive the first session.
+            { "reps": 12, "weight": 25 },
             { "reps": 10, "weight": 25 },
-            { "reps": 8,  "weight": 30 }
+            { "reps": 8,  "weight": 25 }
           ]
         },
         {
@@ -62,16 +64,16 @@ The contract between routine-authoring agents and the app. Validated with Zod on
               "exercise": "biceps-curl",
               "alternatives": ["hammer-curl"],
               "sets": [
-                { "reps": 12, "weight": 10 },
-                { "reps": 12, "weight": 10 },
+                { "reps": 12, "weight": 12 },
+                { "reps": 12, "weight": 12 },
                 { "reps": 10, "weight": 12 }
               ]
             },
             {
               "exercise": "triceps-pushdown",
               "sets": [
-                { "reps": 12, "weight": 20 },
-                { "reps": 12, "weight": 20 },
+                { "reps": 12, "weight": 25 },
+                { "reps": 12, "weight": 25 },
                 { "reps": 10, "weight": 25 }
               ]
             }
@@ -100,10 +102,19 @@ The contract between routine-authoring agents and the app. Validated with Zod on
   countdown is running.
 - **Set**: either `{ reps, weight? }` or `{ duration, weight? }` — never both `reps`
   and `duration`. `weight` optional (bodyweight). Always an array, one entry per set —
-  explicit, supports pyramids, and verbosity is free when agents author the JSON.
+  explicit, supports per-set reps schemes, and verbosity is free when agents author
+  the JSON.
 - **Routine values are suggestions.** At runtime the app overlays the last-used values
-  for that exercise key (per set index; extra sets fall back to the last known value).
-  Edits during a session persist as the new last-used.
+  for that exercise key. Reps and duration overlay per set index (extra sets fall back
+  to the last known value); weight overlays per *exercise*. Edits during a session
+  persist as the new last-used.
+- **Weight is per exercise, not per set.** The last weight logged for an exercise key
+  becomes the weight *every* set of it starts at, that session and the next. Bumping
+  set 2 to 20 kg carries 20 kg to sets 3, 4… and to the whole exercise next time.
+  Consequence for authoring: **weight ramps do not persist.** A `20 / 25 / 30` pyramid
+  is honored only until its first set is logged, after which the exercise sits at one
+  weight. Author flat weights across an exercise's sets and put the intensity
+  progression in `reps` (`12 / 10 / 8`) — that one *is* per set index and survives.
 - **Alternatives**: swapping to an alternative tracks under the *alternative's* key —
   each exercise keeps its own history.
 - **Phase** (`"warmup" | "work" | "cooldown"`, optional, defaults to `"work"`) classifies a

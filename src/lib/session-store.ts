@@ -55,6 +55,36 @@ function applySetToLastUsed(
   return nextSets;
 }
 
+/**
+ * Last weight logged for an exercise this session, in completion order.
+ * `undefined` when none of its sets carried one (bodyweight or duration work).
+ */
+function resolveLastLoggedWeight(
+  entries: ActiveSessionRecord["completed"],
+): number | undefined {
+  return [...entries]
+    .sort((a, b) => a.completedAt - b.completedAt)
+    .reduce<number | undefined>(
+      (lastWeight, entry) => entry.weight ?? lastWeight,
+      undefined,
+    );
+}
+
+/**
+ * Returns `sets` with `weight` applied to every entry, or stripped of weight
+ * when there is none. Weight is a per-exercise value, not a per-set one: the
+ * last one lifted is what every set starts at next session, so the record
+ * never holds a stale weight on a set index this session did not reach.
+ */
+function applyWeightToLastUsed(
+  sets: SetValues[],
+  weight: number | undefined,
+): SetValues[] {
+  return sets.map(({ weight: _previousWeight, ...setValues }) =>
+    weight === undefined ? setValues : { ...setValues, weight },
+  );
+}
+
 export async function startSession(
   routineId: string,
   dayId: string,
@@ -285,6 +315,7 @@ export async function finishSession(): Promise<void> {
             extractSetValues(entry),
           );
         }
+        sets = applyWeightToLastUsed(sets, resolveLastLoggedWeight(group));
         await db.lastUsed.put({ exerciseKey, sets, updatedAt: now });
       }
 

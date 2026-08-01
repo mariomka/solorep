@@ -308,7 +308,6 @@ function WorkoutSessionView({
     }
     return {
       plannedSet: latestEntryStep.plannedSet,
-      setIndex: latestEntry.setIndex,
       weight: latestEntry.weight,
     };
   }, [plan, state.stepIndex, state.swaps, state.completed]);

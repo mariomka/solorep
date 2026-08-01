@@ -350,38 +350,45 @@ export function resolveNextSlotExerciseKey(
 
 /**
  * Weight context from the latest set already completed this session for the
- * same exercise: the earlier step's planned set and set index (to rebuild the
- * weight it was prefilled with) plus the weight actually logged.
+ * same exercise: the earlier step's planned set (to rebuild the weight it was
+ * prefilled with) plus the weight actually logged.
  */
 export interface SessionWeightPrecedent {
   plannedSet: ExerciseSet;
-  setIndex: number;
   weight?: number;
 }
 
-function resolveBaselineWeight(
-  plannedSet: ExerciseSet,
+/**
+ * Weight the exercise is currently working at: the last one in its history,
+ * whichever set logged it. Weight is a per-exercise value, not a per-set one --
+ * what you lifted last is what every set starts at next time -- so it is read
+ * across the whole record instead of at `setIndex`.
+ */
+function resolveLastUsedWeight(
   lastUsedSets: LoggedSetValues[] | undefined,
-  setIndex: number,
 ): number | undefined {
-  const hasHistory = lastUsedSets !== undefined && lastUsedSets.length > 0;
-  const candidate = hasHistory
-    ? (lastUsedSets[setIndex] ?? lastUsedSets[lastUsedSets.length - 1])
-    : undefined;
-  return candidate?.weight ?? plannedSet.weight;
+  if (lastUsedSets === undefined) {
+    return undefined;
+  }
+  return lastUsedSets.reduce<number | undefined>(
+    (lastWeight, set) => set.weight ?? lastWeight,
+    undefined,
+  );
 }
 
 /**
  * Resolves the values to prefill for a set: last-used values for the same set
  * index win; extra sets fall back to the last known value; the routine's
  * planned set is the base. Field-wise, a reps-based plan never takes reps from
- * a duration-only history entry (and vice versa); weight overlays
- * independently.
+ * a duration-only history entry (and vice versa). Weight overlays
+ * independently and ignores the set index entirely: the exercise's last known
+ * weight prefills every set, so the routine's planned weight only shows
+ * through until the first set is logged.
  *
  * When a session precedent is given and its logged weight deviates from the
  * weight that set was prefilled with, the deviation carries over to this set.
- * Confirming the prefilled weight is not a deviation, so planned per-set
- * progressions (pyramids, stored lastUsed ramps) stay intact.
+ * Confirming the prefilled weight is not a deviation, so a planned ramp
+ * survives its own session.
  */
 export function resolvePrefill(
   plannedSet: ExerciseSet,
@@ -394,13 +401,11 @@ export function resolvePrefill(
     ? (lastUsedSets[setIndex] ?? lastUsedSets[lastUsedSets.length - 1])
     : undefined;
 
-  let weight = candidate?.weight ?? plannedSet.weight;
+  const lastUsedWeight = resolveLastUsedWeight(lastUsedSets);
+  let weight = lastUsedWeight ?? plannedSet.weight;
   if (sessionPrecedent !== undefined) {
-    const precedentBaselineWeight = resolveBaselineWeight(
-      sessionPrecedent.plannedSet,
-      lastUsedSets,
-      sessionPrecedent.setIndex,
-    );
+    const precedentBaselineWeight =
+      lastUsedWeight ?? sessionPrecedent.plannedSet.weight;
     const didDeviateFromBaseline =
       sessionPrecedent.weight !== precedentBaselineWeight;
     if (didDeviateFromBaseline) {
