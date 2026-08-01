@@ -19,6 +19,7 @@ export interface SetCompletionInput extends SetValues {
   restEndsAt?: number;
 }
 
+/** Drops absent fields, so a completed entry never carries `undefined` keys. */
 function extractSetValues(source: SetValues): SetValues {
   const setValues: SetValues = {};
   if (source.reps !== undefined) {
@@ -34,30 +35,9 @@ function extractSetValues(source: SetValues): SetValues {
 }
 
 /**
- * Returns a copy of `sets` with `setValues` written at `setIndex`. Gaps below
- * `setIndex` are padded with the last known value, or the new values when the
- * record had none.
- */
-function applySetToLastUsed(
-  sets: SetValues[],
-  setIndex: number,
-  setValues: SetValues,
-): SetValues[] {
-  const nextSets = [...sets];
-  const hasKnownValues = nextSets.length > 0;
-  const paddingValue = hasKnownValues
-    ? nextSets[nextSets.length - 1]
-    : setValues;
-  while (nextSets.length < setIndex) {
-    nextSets.push({ ...paddingValue });
-  }
-  nextSets[setIndex] = setValues;
-  return nextSets;
-}
-
-/**
  * Last weight logged for an exercise this session, in completion order.
- * `undefined` when none of its sets carried one (bodyweight or duration work).
+ * `undefined` when none of its sets carried one (bodyweight or duration work),
+ * which is what clears a weight the exercise no longer uses.
  */
 function resolveLastLoggedWeight(
   entries: ActiveSessionRecord["completed"],
@@ -68,21 +48,6 @@ function resolveLastLoggedWeight(
       (lastWeight, entry) => entry.weight ?? lastWeight,
       undefined,
     );
-}
-
-/**
- * Returns `sets` with `weight` applied to every entry, or stripped of weight
- * when there is none. Weight is a per-exercise value, not a per-set one: the
- * last one lifted is what every set starts at next session, so the record
- * never holds a stale weight on a set index this session did not reach.
- */
-function applyWeightToLastUsed(
-  sets: SetValues[],
-  weight: number | undefined,
-): SetValues[] {
-  return sets.map(({ weight: _previousWeight, ...setValues }) =>
-    weight === undefined ? setValues : { ...setValues, weight },
-  );
 }
 
 export async function startSession(
@@ -288,8 +253,8 @@ export async function finishSession(): Promise<void> {
 
       // lastUsed is derived from the completed entries only at finish time:
       // discarded sessions leave no trace. Entries are keyed by the effective
-      // (post-swap) exercise key. Collisions on the same key + setIndex (two
-      // day items hitting the same exercise) resolve last-completed wins.
+      // (post-swap) exercise key, and each key keeps one weight: the last one
+      // logged, whichever set logged it.
       const entriesByExerciseKey = new Map<
         string,
         ActiveSessionRecord["completed"]
@@ -301,22 +266,11 @@ export async function finishSession(): Promise<void> {
       }
 
       for (const [exerciseKey, group] of entriesByExerciseKey) {
-        // Ascending setIndex, then completedAt; the sort is stable, so ties
-        // keep array order and the last-applied entry wins.
-        const orderedEntries = [...group].sort(
-          (a, b) => a.setIndex - b.setIndex || a.completedAt - b.completedAt,
-        );
-        const existingRecord = await db.lastUsed.get(exerciseKey);
-        let sets = existingRecord === undefined ? [] : existingRecord.sets;
-        for (const entry of orderedEntries) {
-          sets = applySetToLastUsed(
-            sets,
-            entry.setIndex,
-            extractSetValues(entry),
-          );
-        }
-        sets = applyWeightToLastUsed(sets, resolveLastLoggedWeight(group));
-        await db.lastUsed.put({ exerciseKey, sets, updatedAt: now });
+        await db.lastUsed.put({
+          exerciseKey,
+          weight: resolveLastLoggedWeight(group),
+          updatedAt: now,
+        });
       }
 
       await db.activeSession.delete(ACTIVE_SESSION_ID);

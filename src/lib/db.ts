@@ -12,9 +12,22 @@ export interface ProgressRecord {
   currentDayIndex: number;
 }
 
+/**
+ * What an exercise is currently working at. Only the weight persists between
+ * sessions: reps and duration are the routine's prescription, and the per-set
+ * record of what was actually done lives in `sessions`.
+ */
 export interface LastUsedRecord {
   exerciseKey: string;
-  sets: Array<{ reps?: number; duration?: number; weight?: number }>;
+  weight?: number; // absent for bodyweight and duration-only work
+  updatedAt: number;
+}
+
+/** `lastUsed` as stored by schema v1, read only by the v2 upgrade. */
+interface LegacyLastUsedRecord {
+  exerciseKey: string;
+  sets?: Array<{ reps?: number; duration?: number; weight?: number }>;
+  weight?: number;
   updatedAt: number;
 }
 
@@ -77,3 +90,26 @@ db.version(1).stores({
   sessions: "++id, routineId, finishedAt",
   activeSession: "id",
 });
+
+// v2 collapses `lastUsed.sets` into a single weight per exercise. The rule the
+// app had already converged on -- the last weight logged is what every set
+// starts at -- becomes the shape. Deliberately self-contained: a migration is
+// a snapshot of the past, so it must not follow the app's rules as they move.
+db.version(2)
+  .stores({ lastUsed: "exerciseKey" })
+  .upgrade((transaction) =>
+    transaction
+      .table<LegacyLastUsedRecord>("lastUsed")
+      .toCollection()
+      .modify((record) => {
+        const lastWeight = (record.sets ?? []).reduce<number | undefined>(
+          (weight, set) => set.weight ?? weight,
+          undefined,
+        );
+        const hasWeight = lastWeight !== undefined;
+        if (hasWeight) {
+          record.weight = lastWeight;
+        }
+        delete record.sets;
+      }),
+  );

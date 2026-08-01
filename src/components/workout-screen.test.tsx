@@ -431,7 +431,7 @@ describe("WorkoutScreen", () => {
     await seedSession(0);
     await db.lastUsed.put({
       exerciseKey: "back-squat",
-      sets: [{ reps: 12, weight: 55 }],
+      weight: 55,
       updatedAt: Date.now(),
     });
 

@@ -113,7 +113,7 @@ describe("recordSetCompletion", () => {
     await startSession("fullbody-3d", "day-1", 0);
     await db.lastUsed.put({
       exerciseKey: "back-squat",
-      sets: [{ reps: 5, weight: 100 }],
+      weight: 100,
       updatedAt: 123,
     });
 
@@ -137,7 +137,7 @@ describe("recordSetCompletion", () => {
     const existingRecord = await db.lastUsed.get("back-squat");
     expect(existingRecord).toEqual({
       exerciseKey: "back-squat",
-      sets: [{ reps: 5, weight: 100 }],
+      weight: 100,
       updatedAt: 123,
     });
     await expect(db.lastUsed.get("bench-press")).resolves.toBeUndefined();
@@ -420,52 +420,54 @@ describe("finishSession", () => {
 
     await finishSession();
 
-    const squatRecord = await db.lastUsed.get("back-squat");
-    expect(squatRecord?.sets).toEqual([
-      { reps: 10, weight: 55 },
-      { reps: 8, weight: 55 },
-    ]);
-    const benchRecord = await db.lastUsed.get("bench-press");
-    expect(benchRecord?.sets).toEqual([{ reps: 12, weight: 30 }]);
+    // One weight per exercise: the last one logged, not one per set index.
+    await expect(db.lastUsed.get("back-squat")).resolves.toMatchObject({
+      weight: 55,
+    });
+    await expect(db.lastUsed.get("bench-press")).resolves.toMatchObject({
+      weight: 30,
+    });
   });
 
-  it("stores the session's last weight on every set, reps stay per set", async () => {
-    // Weight is a per-exercise value: bumping it mid-exercise makes it the
-    // weight the whole exercise starts at next session.
+  it("keeps the weight of the last set completed, not of the highest set index", async () => {
     await startSession("fullbody-3d", "day-1", 0);
-    await recordSetCompletion({
-      stepIndex: 0,
-      ...completionIdentity("back-squat"),
-      exerciseKey: "back-squat",
-      setIndex: 0,
-      reps: 10,
-      weight: 15,
-    });
-    await recordSetCompletion({
-      stepIndex: 1,
-      ...completionIdentity("back-squat"),
-      exerciseKey: "back-squat",
-      setIndex: 1,
-      reps: 8,
-      weight: 20,
+    // Set 2 logged first, then set 1 corrected on the way back: the correction
+    // is the last thing lifted, so it is what the exercise carries forward.
+    await db.activeSession.update("current", {
+      completed: [
+        {
+          stepIndex: 1,
+          ...completionIdentity("back-squat"),
+          exerciseKey: "back-squat",
+          setIndex: 1,
+          reps: 8,
+          weight: 20,
+          completedAt: 1_000,
+        },
+        {
+          stepIndex: 0,
+          ...completionIdentity("back-squat"),
+          exerciseKey: "back-squat",
+          setIndex: 0,
+          reps: 10,
+          weight: 17.5,
+          completedAt: 2_000,
+        },
+      ],
+      currentStepIndex: 2,
     });
 
     await finishSession();
 
-    const record = await db.lastUsed.get("back-squat");
-    expect(record?.sets).toEqual([
-      { reps: 10, weight: 20 },
-      { reps: 8, weight: 20 },
-    ]);
+    await expect(db.lastUsed.get("back-squat")).resolves.toMatchObject({
+      weight: 17.5,
+    });
   });
 
-  it("strips the stored weight when the exercise was logged without one", async () => {
+  it("clears the stored weight when the exercise was logged without one", async () => {
     await db.lastUsed.put({
       exerciseKey: "back-squat",
-      sets: [
-        { reps: 10, weight: 50 },
-        { reps: 10, weight: 50 },
-      ],
+      weight: 50,
       updatedAt: 123,
     });
     await startSession("fullbody-3d", "day-1", 0);
@@ -480,50 +482,7 @@ describe("finishSession", () => {
     await finishSession();
 
     const record = await db.lastUsed.get("back-squat");
-    expect(record?.sets).toEqual([{ reps: 12 }, { reps: 10 }]);
-  });
-
-  it("pads lastUsed gaps with the last known value, or the new values when the record had none", async () => {
-    await db.lastUsed.put({
-      exerciseKey: "bench-press",
-      sets: [{ reps: 12, weight: 30 }],
-      updatedAt: 123,
-    });
-    await startSession("fullbody-3d", "day-1", 0);
-    // No prior record: gaps below setIndex are padded with the new values.
-    await recordSetCompletion({
-      stepIndex: 0,
-      ...completionIdentity("back-squat"),
-      exerciseKey: "back-squat",
-      setIndex: 2,
-      reps: 10,
-      weight: 50,
-    });
-    // Existing record: gaps are padded with the last known value.
-    await recordSetCompletion({
-      stepIndex: 1,
-      ...completionIdentity("bench-press", "1:0"),
-      exerciseKey: "bench-press",
-      setIndex: 3,
-      reps: 6,
-      weight: 40,
-    });
-
-    await finishSession();
-
-    const freshRecord = await db.lastUsed.get("back-squat");
-    expect(freshRecord?.sets).toEqual([
-      { reps: 10, weight: 50 },
-      { reps: 10, weight: 50 },
-      { reps: 10, weight: 50 },
-    ]);
-    const paddedRecord = await db.lastUsed.get("bench-press");
-    expect(paddedRecord?.sets).toEqual([
-      { reps: 12, weight: 40 },
-      { reps: 12, weight: 40 },
-      { reps: 12, weight: 40 },
-      { reps: 6, weight: 40 },
-    ]);
+    expect(record?.weight).toBeUndefined();
   });
 
   it("writes lastUsed only under the effective key when a set was completed on a swapped alternative", async () => {
@@ -541,7 +500,7 @@ describe("finishSession", () => {
     await finishSession();
 
     const alternativeRecord = await db.lastUsed.get("leg-press");
-    expect(alternativeRecord?.sets).toEqual([{ reps: 10, weight: 90 }]);
+    expect(alternativeRecord?.weight).toBe(90);
     // The primary key never leaks values it did not log.
     await expect(db.lastUsed.get("back-squat")).resolves.toBeUndefined();
   });
@@ -584,10 +543,7 @@ describe("finishSession", () => {
       }),
     ]);
     const alternativeRecord = await db.lastUsed.get("leg-press");
-    expect(alternativeRecord?.sets).toEqual([
-      { reps: 10, weight: 90 },
-      { reps: 8, weight: 90 },
-    ]);
+    expect(alternativeRecord?.weight).toBe(90);
     await expect(db.lastUsed.get("back-squat")).resolves.toBeUndefined();
   });
 
@@ -619,17 +575,17 @@ describe("finishSession", () => {
       "back-squat",
     ]);
     await expect(db.lastUsed.get("leg-press")).resolves.toMatchObject({
-      sets: [{ reps: 10, weight: 50 }],
+      weight: 50,
     });
     await expect(db.lastUsed.get("back-squat")).resolves.toMatchObject({
-      sets: [{ reps: 6, weight: 70 }],
+      weight: 70,
     });
   });
 
-  it("resolves same key + setIndex collisions with the last-completed entry", async () => {
+  it("resolves collisions between two day items on the same exercise with the last-completed entry", async () => {
     await startSession("fullbody-3d", "day-1", 0);
-    // Two day items hitting the same exercise at the same set index: entries
-    // land on different steps but collide in lastUsed.
+    // Two day items hitting the same exercise: their entries land on different
+    // steps but collapse into one lastUsed weight.
     await db.activeSession.update("current", {
       completed: [
         {
@@ -657,7 +613,7 @@ describe("finishSession", () => {
     await finishSession();
 
     const record = await db.lastUsed.get("back-squat");
-    expect(record?.sets).toEqual([{ reps: 8, weight: 60 }]);
+    expect(record?.weight).toBe(60);
   });
 });
 
@@ -667,7 +623,7 @@ describe("discardActiveSession", () => {
     await db.progress.put({ routineId: "fullbody-3d", currentDayIndex: 1 });
     await db.lastUsed.put({
       exerciseKey: "back-squat",
-      sets: [{ reps: 10, weight: 50 }],
+      weight: 50,
       updatedAt: 123,
     });
     await db.sessions.add({

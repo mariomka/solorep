@@ -29,7 +29,7 @@ describe("importRoutineFromFile", () => {
     await db.progress.put({ routineId: "fullbody-3d", currentDayIndex: 2 });
     await db.lastUsed.put({
       exerciseKey: "back-squat",
-      sets: [{ reps: 10, weight: 50 }],
+      weight: 50,
       updatedAt: 123,
     });
     await db.sessions.add({
@@ -104,7 +104,7 @@ describe("deleteRoutine", () => {
     await importRoutineFromFile(makeRoutineFile(fullbody3d));
     await db.lastUsed.put({
       exerciseKey: "back-squat",
-      sets: [{ reps: 10, weight: 50 }],
+      weight: 50,
       updatedAt: 123,
     });
     await db.sessions.add({

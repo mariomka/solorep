@@ -10,6 +10,7 @@
 ## Key Conventions
 
 - `beforeEach(clearDatabase)` in every suite touching the DB -- fake-indexeddb persists state within a test file (Vitest isolates files per worker, so no cross-file bleed).
+- Schema upgrades are tested in `src/lib/db.test.ts`: it seeds through a Dexie instance declaring only the OLD version, closes it, then opens the app's `db` so the real upgrade path runs. That suite deletes the database in `beforeEach` instead of clearing it, since a fresh install would skip the upgrade entirely and prove nothing.
 - Content driven by `useLiveQuery`: use `findBy*` / `waitFor`, never `getBy*` -- first render is `undefined` and `getBy*` will flake.
 - Test behavior, not implementation (user-visible output, interactions, persisted state -- not internal calls or CSS utility classes). Never assert Tailwind classes with `toHaveClass`; verify styling visually.
 - Accessibility is required in the implementation, but is not tested with dedicated assertions.
@@ -21,4 +22,4 @@
 - userEvent v14 `upload()` silently skips the `change` event when `input.files` is unchanged -- this is why the `input.value` reset exists and how its regression test works.
 - Real IndexedDB persistence (data surviving a reload) is only provable in e2e -- fake-indexeddb dies with the process. `e2e/import-routine.spec.ts` covers it.
 - Playwright browsers need a one-time `bunx playwright install chromium` per machine.
-- The lastUsed overlay does NOT apply within a session: `lastUsed` only lands at `finishSession`, so a first-ever session prefills the routine's planned values throughout (and discarded sessions leave no trace). The overlay kicks in on the NEXT session. E2e volume assertions rely on this (see the 740 kg comment in `e2e/workout-session.spec.ts`). The one in-session carry-over is weight DEVIATION: a logged weight that differs from what that set was prefilled with carries to the exercise's later sets (`resolvePrefill`'s session precedent); confirming the prefill carries nothing, which is why the e2e volume still pins planned values.
+- The lastUsed overlay (weight only -- reps and duration always come from the routine) does NOT apply within a session: `lastUsed` only lands at `finishSession`, so a first-ever session prefills the routine's planned values throughout (and discarded sessions leave no trace). The overlay kicks in on the NEXT session. E2e volume assertions rely on this (see the 740 kg comment in `e2e/workout-session.spec.ts`). The one in-session carry-over is weight DEVIATION: a logged weight that differs from what that set was prefilled with carries to the exercise's later sets (`resolvePrefill`'s session precedent); confirming the prefill carries nothing, which is why the e2e volume still pins planned values.

@@ -597,33 +597,7 @@ describe("swapKey", () => {
 
 describe("resolvePrefill", () => {
   it("overlays the last-used weight on the planned reps", () => {
-    const prefill = resolvePrefill({ reps: 10, weight: 40 }, [
-      { reps: 8, weight: 45 },
-    ]);
-
-    expect(prefill).toEqual({ reps: 10, weight: 45 });
-  });
-
-  it("prefills every set with the exercise's last known weight, not the set index's", () => {
-    // A record left non-uniform by an older per-set history: the first set
-    // must not keep pulling the weight that was already left behind.
-    const lastUsedSets = [
-      { reps: 10, weight: 15 },
-      { reps: 10, weight: 20 },
-      { reps: 10, weight: 20 },
-    ];
-
-    expect(resolvePrefill({ reps: 10 }, lastUsedSets)).toEqual({
-      reps: 10,
-      weight: 20,
-    });
-  });
-
-  it("keeps the last known weight when the trailing history entries have none", () => {
-    const prefill = resolvePrefill({ reps: 10, weight: 40 }, [
-      { reps: 10, weight: 45 },
-      { reps: 8 },
-    ]);
+    const prefill = resolvePrefill({ reps: 10, weight: 40 }, 45);
 
     expect(prefill).toEqual({ reps: 10, weight: 45 });
   });
@@ -631,45 +605,29 @@ describe("resolvePrefill", () => {
   it("takes reps from the routine, never from history", () => {
     // Re-importing a routine preserves history, so a new phase's rep drop
     // (4 -> 3) has to show through: reps are the prescription, not a record.
-    const prefill = resolvePrefill({ reps: 3, weight: 100 }, [
-      { reps: 4, weight: 110 },
-      { reps: 4, weight: 110 },
-    ]);
+    const prefill = resolvePrefill({ reps: 3, weight: 100 }, 110);
 
     expect(prefill).toEqual({ reps: 3, weight: 110 });
   });
 
-  it("takes duration from the routine, never from history", () => {
-    const prefill = resolvePrefill({ duration: 300 }, [{ duration: 240 }]);
-
-    expect(prefill).toEqual({ duration: 300 });
+  it("takes duration from the routine and still overlays the weight", () => {
+    expect(resolvePrefill({ duration: 300 }, undefined)).toEqual({
+      duration: 300,
+    });
+    expect(resolvePrefill({ duration: 45, weight: 10 }, 8)).toEqual({
+      duration: 45,
+      weight: 8,
+    });
   });
 
-  it("uses the routine values when history is undefined", () => {
+  it("uses the routine weight when the exercise has no history", () => {
     const prefill = resolvePrefill({ reps: 10, weight: 40 }, undefined);
 
     expect(prefill).toEqual({ reps: 10, weight: 40 });
   });
 
-  it("uses the routine values when history is empty", () => {
-    const prefill = resolvePrefill({ reps: 10, weight: 40 }, []);
-
-    expect(prefill).toEqual({ reps: 10, weight: 40 });
-  });
-
-  it("overlays weight across the reps/duration divide", () => {
-    // Weight is per exercise, so a history entry logged under the other set
-    // kind still carries its weight over.
-    expect(
-      resolvePrefill({ reps: 10, weight: 40 }, [{ duration: 45, weight: 12 }]),
-    ).toEqual({ reps: 10, weight: 12 });
-    expect(
-      resolvePrefill({ duration: 45, weight: 10 }, [{ reps: 12, weight: 8 }]),
-    ).toEqual({ duration: 45, weight: 8 });
-  });
-
   it("keeps weight undefined for bodyweight sets with no weight anywhere", () => {
-    const prefill = resolvePrefill({ reps: 12 }, [{ reps: 15 }]);
+    const prefill = resolvePrefill({ reps: 12 }, undefined);
 
     expect(prefill).toEqual({ reps: 12 });
     expect("weight" in prefill).toBe(false);
@@ -697,18 +655,13 @@ describe("resolvePrefill", () => {
     });
 
     it("judges deviation against the last-used baseline, not the plan", () => {
-      const lastUsedSets = [
-        { reps: 10, weight: 55 },
-        { reps: 8, weight: 55 },
-      ];
-
-      const confirmed = resolvePrefill({ reps: 8, weight: 60 }, lastUsedSets, {
+      const confirmed = resolvePrefill({ reps: 8, weight: 60 }, 55, {
         plannedSet: plannedFirstSet,
         weight: 55,
       });
       expect(confirmed).toEqual({ reps: 8, weight: 55 });
 
-      const deviated = resolvePrefill({ reps: 8, weight: 60 }, lastUsedSets, {
+      const deviated = resolvePrefill({ reps: 8, weight: 60 }, 55, {
         plannedSet: plannedFirstSet,
         weight: 57.5,
       });

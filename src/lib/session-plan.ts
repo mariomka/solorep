@@ -359,24 +359,6 @@ export interface SessionWeightPrecedent {
 }
 
 /**
- * Weight the exercise is currently working at: the last one in its history,
- * whichever set logged it. Weight is a per-exercise value, not a per-set one --
- * what you lifted last is what every set starts at next time -- so the whole
- * record is read instead of one set's entry.
- */
-function resolveLastUsedWeight(
-  lastUsedSets: LoggedSetValues[] | undefined,
-): number | undefined {
-  if (lastUsedSets === undefined) {
-    return undefined;
-  }
-  return lastUsedSets.reduce<number | undefined>(
-    (lastWeight, set) => set.weight ?? lastWeight,
-    undefined,
-  );
-}
-
-/**
  * Resolves the values to prefill for a set. The two fields answer different
  * questions, so they come from different places:
  *
@@ -384,9 +366,9 @@ function resolveLastUsedWeight(
  *   plan. What you logged last time is a record of what happened (six reps on
  *   a bad day), not the target to retry; letting it win would also make a new
  *   phase's rep drop invisible, since re-importing preserves history.
- * - Weight is the exercise's STATE and comes from its history: the last weight
- *   logged prefills every set, whatever set logged it. The planned weight is
- *   just the starting point until the first set is logged.
+ * - Weight is the exercise's STATE and comes from `lastUsedWeight`: one value
+ *   per exercise, the last one logged, prefilling every set. The planned
+ *   weight is just the starting point until the first set is logged.
  *
  * When a session precedent is given and its logged weight deviates from the
  * weight that set was prefilled with, the deviation carries over to this set.
@@ -395,10 +377,9 @@ function resolveLastUsedWeight(
  */
 export function resolvePrefill(
   plannedSet: ExerciseSet,
-  lastUsedSets: LoggedSetValues[] | undefined,
+  lastUsedWeight: number | undefined,
   sessionPrecedent?: SessionWeightPrecedent,
 ): LoggedSetValues {
-  const lastUsedWeight = resolveLastUsedWeight(lastUsedSets);
   let weight = lastUsedWeight ?? plannedSet.weight;
   if (sessionPrecedent !== undefined) {
     const precedentBaselineWeight =
