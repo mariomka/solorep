@@ -11,7 +11,7 @@ import {
 } from "vitest";
 import { SetScreen } from "@/components/set-screen";
 import { db } from "@/lib/db";
-import { parseRoutine } from "@/lib/routine-schema";
+import { parseRoutine, type Routine } from "@/lib/routine-schema";
 import { workoutScreenWakeLock } from "@/lib/screen-wake-lock";
 import { buildDayPlan, swapKey } from "@/lib/session-plan";
 import {
@@ -37,6 +37,34 @@ vi.mock("@/lib/timer-feedback", { spy: true });
 vi.mock("@/components/set-screen", { spy: true });
 
 const routine = parseRoutine(fullbody3d);
+
+// Same routine with a one-second first plank set: the countdown test needs a
+// short duration, and durations come from the plan, never from history.
+const shortPlankRoutine: Routine = {
+  ...routine,
+  days: routine.days.map((day, dayIndex) => {
+    const isFirstDay = dayIndex === 0;
+    if (!isFirstDay) {
+      return day;
+    }
+    return {
+      ...day,
+      exercises: day.exercises.map((item) => {
+        const isPlank = "exercise" in item && item.exercise === "plank";
+        if (!isPlank) {
+          return item;
+        }
+        return {
+          ...item,
+          sets: item.sets.map((set, setIndex) =>
+            setIndex === 0 ? { duration: 1 } : set,
+          ),
+        };
+      }),
+    };
+  }),
+};
+
 const groupedProgressRoutine = parseRoutine({
   id: "grouped-progress",
   name: "Grouped progress",
@@ -274,6 +302,27 @@ async function seedGroupedProgressSession(
   });
 }
 
+async function seedShortPlankSession(currentStepIndex: number): Promise<void> {
+  await db.routines.put({
+    id: shortPlankRoutine.id,
+    routine: shortPlankRoutine,
+    importedAt: Date.now(),
+  });
+  await startSession(shortPlankRoutine.id, shortPlankRoutine.days[0].id, 0);
+  await db.activeSession.update("current", { currentStepIndex });
+}
+
+function renderShortPlankWorkout() {
+  render(
+    <WorkoutScreen
+      routine={shortPlankRoutine}
+      dayIndex={0}
+      onDayCompleted={vi.fn()}
+      onExit={vi.fn()}
+    />,
+  );
+}
+
 function renderGroupedProgressWorkout() {
   render(
     <WorkoutScreen
@@ -378,7 +427,7 @@ describe("WorkoutScreen", () => {
     expect(workoutScreenWakeLock.release).toHaveBeenCalledTimes(1);
   });
 
-  it("renders the first step with last-used values over routine values", async () => {
+  it("renders the first step with the last-used weight over the routine's, keeping its planned reps", async () => {
     await seedSession(0);
     await db.lastUsed.put({
       exerciseKey: "back-squat",
@@ -397,8 +446,9 @@ describe("WorkoutScreen", () => {
 
     const repsInput = screen.getByTestId("set-reps-input");
     const weightInput = screen.getByTestId("set-weight-input");
-    await waitFor(() => expect(repsInput).toHaveValue("12"));
-    expect(weightInput).toHaveValue("55");
+    await waitFor(() => expect(weightInput).toHaveValue("55"));
+    // Planned 10 reps at 50 kg: the weight is history, the reps are the plan.
+    expect(repsInput).toHaveValue("10");
   });
 
   it("groups standalone sets and interleaved superset members by exercise slot", async () => {
@@ -889,14 +939,10 @@ describe("WorkoutScreen", () => {
 
   it("auto-completes a duration set when the countdown reaches zero", async () => {
     // Day 1: back-squat (4) + bench-press (4) + barbell-row (3) = step 11
-    // starts the plank.
-    await seedSession(0, 11);
-    await db.lastUsed.put({
-      exerciseKey: "plank",
-      sets: [{ duration: 1 }],
-      updatedAt: Date.now(),
-    });
-    renderWorkout();
+    // starts the plank. Its first set is shortened in the routine itself:
+    // durations come from the plan, so history cannot speed the test up.
+    await seedShortPlankSession(11);
+    renderShortPlankWorkout();
 
     expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
       "Plancha",

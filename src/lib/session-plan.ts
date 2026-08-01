@@ -361,8 +361,8 @@ export interface SessionWeightPrecedent {
 /**
  * Weight the exercise is currently working at: the last one in its history,
  * whichever set logged it. Weight is a per-exercise value, not a per-set one --
- * what you lifted last is what every set starts at next time -- so it is read
- * across the whole record instead of at `setIndex`.
+ * what you lifted last is what every set starts at next time -- so the whole
+ * record is read instead of one set's entry.
  */
 function resolveLastUsedWeight(
   lastUsedSets: LoggedSetValues[] | undefined,
@@ -377,13 +377,16 @@ function resolveLastUsedWeight(
 }
 
 /**
- * Resolves the values to prefill for a set: last-used values for the same set
- * index win; extra sets fall back to the last known value; the routine's
- * planned set is the base. Field-wise, a reps-based plan never takes reps from
- * a duration-only history entry (and vice versa). Weight overlays
- * independently and ignores the set index entirely: the exercise's last known
- * weight prefills every set, so the routine's planned weight only shows
- * through until the first set is logged.
+ * Resolves the values to prefill for a set. The two fields answer different
+ * questions, so they come from different places:
+ *
+ * - Reps and duration are the routine's PRESCRIPTION and always come from the
+ *   plan. What you logged last time is a record of what happened (six reps on
+ *   a bad day), not the target to retry; letting it win would also make a new
+ *   phase's rep drop invisible, since re-importing preserves history.
+ * - Weight is the exercise's STATE and comes from its history: the last weight
+ *   logged prefills every set, whatever set logged it. The planned weight is
+ *   just the starting point until the first set is logged.
  *
  * When a session precedent is given and its logged weight deviates from the
  * weight that set was prefilled with, the deviation carries over to this set.
@@ -393,14 +396,8 @@ function resolveLastUsedWeight(
 export function resolvePrefill(
   plannedSet: ExerciseSet,
   lastUsedSets: LoggedSetValues[] | undefined,
-  setIndex: number,
   sessionPrecedent?: SessionWeightPrecedent,
 ): LoggedSetValues {
-  const hasHistory = lastUsedSets !== undefined && lastUsedSets.length > 0;
-  const candidate = hasHistory
-    ? (lastUsedSets[setIndex] ?? lastUsedSets[lastUsedSets.length - 1])
-    : undefined;
-
   const lastUsedWeight = resolveLastUsedWeight(lastUsedSets);
   let weight = lastUsedWeight ?? plannedSet.weight;
   if (sessionPrecedent !== undefined) {
@@ -415,11 +412,11 @@ export function resolvePrefill(
 
   const isRepsBased = "reps" in plannedSet;
   if (isRepsBased) {
-    const reps = candidate?.reps ?? plannedSet.reps;
+    const { reps } = plannedSet;
     return weight === undefined ? { reps } : { reps, weight };
   }
 
-  const duration = candidate?.duration ?? plannedSet.duration;
+  const { duration } = plannedSet;
   return weight === undefined ? { duration } : { duration, weight };
 }
 

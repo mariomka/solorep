@@ -104,17 +104,21 @@ The contract between routine-authoring agents and the app. Validated with Zod on
   and `duration`. `weight` optional (bodyweight). Always an array, one entry per set —
   explicit, supports per-set reps schemes, and verbosity is free when agents author
   the JSON.
-- **Routine values are suggestions.** At runtime the app overlays the last-used values
-  for that exercise key. Reps and duration overlay per set index (extra sets fall back
-  to the last known value); weight overlays per *exercise*. Edits during a session
-  persist as the new last-used.
-- **Weight is per exercise, not per set.** The last weight logged for an exercise key
-  becomes the weight *every* set of it starts at, that session and the next. Bumping
-  set 2 to 20 kg carries 20 kg to sets 3, 4… and to the whole exercise next time.
-  Consequence for authoring: **weight ramps do not persist.** A `20 / 25 / 30` pyramid
-  is honored only until its first set is logged, after which the exercise sits at one
-  weight. Author flat weights across an exercise's sets and put the intensity
-  progression in `reps` (`12 / 10 / 8`) — that one *is* per set index and survives.
+- **Reps and duration are the prescription: the routine always wins.** They prefill
+  straight from the plan, every session, and history never overrides them. Editing
+  them during a session logs what you actually did (it feeds the summary and the
+  session archive) without becoming next time's target. This is what makes a new
+  phase's rep drop (`4 → 3`) visible after a re-import, which preserves history.
+- **Weight is state: history always wins.** The last weight logged for an exercise
+  key becomes the weight *every* set of it starts at, that session and the next.
+  Bumping set 2 to 20 kg carries 20 kg to sets 3, 4… and to the whole exercise next
+  time. The routine's `weight` is only the starting point until the first set is
+  logged, so **suggested weights are decorative for any exercise already trained** —
+  to force a new load, use a new exercise key.
+- **Weight ramps do not persist.** A `20 / 25 / 30` pyramid is honored only until its
+  first set is logged, after which the exercise sits at one weight. Author flat
+  weights across an exercise's sets and put the intensity progression in `reps`
+  (`12 / 10 / 8`), which is per set index and comes from the plan every time.
 - **Alternatives**: swapping to an alternative tracks under the *alternative's* key —
   each exercise keeps its own history.
 - **Phase** (`"warmup" | "work" | "cooldown"`, optional, defaults to `"work"`) classifies a

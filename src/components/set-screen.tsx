@@ -286,7 +286,6 @@ export function SetScreen({
         const prefill = resolvePrefill(
           step.plannedSet,
           lastUsedRecord?.sets,
-          step.setIndex,
           sessionWeightPrecedent,
         );
         setRepsInput(prefill.reps?.toString() ?? "");
