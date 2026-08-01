@@ -683,8 +683,10 @@ describe("WorkoutScreen", () => {
     expect(screen.getByTestId("rest-timer")).toHaveTextContent("01:15");
     await user.click(screen.getByTestId("rest-skip"));
 
-    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
-      "Curl de bíceps con mancuernas",
+    await waitFor(() =>
+      expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+        "Curl de bíceps con mancuernas",
+      ),
     );
     expect(screen.getByTestId("set-progress")).toHaveTextContent(
       "Serie 2 de 3",
@@ -745,8 +747,10 @@ describe("WorkoutScreen", () => {
 
     await user.click(screen.getByTestId("set-previous"));
 
-    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
-      "Serie 1 de 4",
+    await waitFor(() =>
+      expect(screen.getByTestId("set-progress")).toHaveTextContent(
+        "Serie 1 de 4",
+      ),
     );
     const weightInput = screen.getByTestId("set-weight-input");
     await waitFor(() => expect(weightInput).toHaveValue("50"));
@@ -790,8 +794,10 @@ describe("WorkoutScreen", () => {
       await screen.findByTestId("set-exercise-option-leg-press"),
     );
 
-    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
-      "Prensa de piernas",
+    await waitFor(() =>
+      expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+        "Prensa de piernas",
+      ),
     );
     const repsInput = screen.getByTestId("set-reps-input");
     await waitFor(() => expect(repsInput).toHaveValue("10"));
@@ -826,16 +832,20 @@ describe("WorkoutScreen", () => {
       await screen.findByTestId("set-exercise-option-leg-press"),
     );
 
-    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
-      "Prensa de piernas",
+    await waitFor(() =>
+      expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+        "Prensa de piernas",
+      ),
     );
     await user.click(screen.getByTestId("set-exercise-select"));
     await user.click(
       await screen.findByTestId("set-exercise-option-back-squat"),
     );
 
-    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
-      "Sentadilla con barra",
+    await waitFor(() =>
+      expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+        "Sentadilla con barra",
+      ),
     );
     await expect(db.activeSession.get("current")).resolves.toMatchObject({
       swaps: {},
@@ -897,8 +907,10 @@ describe("WorkoutScreen", () => {
       await screen.findByTestId("set-exercise-option-leg-press"),
     );
 
-    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
-      "Prensa de piernas",
+    await waitFor(() =>
+      expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+        "Prensa de piernas",
+      ),
     );
     await expect(db.activeSession.get("current")).resolves.toMatchObject({
       swaps: { "0:0": "leg-press" },
@@ -1123,8 +1135,10 @@ describe("WorkoutScreen", () => {
 
     await user.click(screen.getByTestId("set-previous"));
 
-    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
-      "Serie 1 de 4",
+    await waitFor(() =>
+      expect(screen.getByTestId("set-progress")).toHaveTextContent(
+        "Serie 1 de 4",
+      ),
     );
     expect(screen.queryByTestId("set-postpone")).not.toBeInTheDocument();
   });
@@ -1379,8 +1393,10 @@ describe("WorkoutScreen", () => {
     await db.activeSession.update("current", { currentStepIndex: 0 });
     renderWorkout();
 
-    expect(await screen.findByTestId("set-exercise-name")).toHaveTextContent(
-      "Press banca",
+    await waitFor(() =>
+      expect(screen.getByTestId("set-exercise-name")).toHaveTextContent(
+        "Press banca",
+      ),
     );
     expect(
       screen.queryByTestId("set-postponed-eyebrow"),

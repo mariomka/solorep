@@ -136,8 +136,10 @@ describe("App", () => {
 
     // Set 2 of 2: prefills the routine's planned 8 -- lastUsed only lands at
     // finishSession, so a first-ever session sees planned values throughout.
-    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
-      "Serie 2 de 2",
+    await waitFor(() =>
+      expect(screen.getByTestId("set-progress")).toHaveTextContent(
+        "Serie 2 de 2",
+      ),
     );
     const secondRepsInput = screen.getByTestId("set-reps-input");
     await waitFor(() => expect(secondRepsInput).toHaveValue("8"));
@@ -179,8 +181,10 @@ describe("App", () => {
     await waitFor(() => expect(firstRepsInput).toHaveValue("10"));
     await user.click(screen.getByTestId("set-continue"));
     await user.click(await screen.findByTestId("rest-skip"));
-    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
-      "Serie 2 de 2",
+    await waitFor(() =>
+      expect(screen.getByTestId("set-progress")).toHaveTextContent(
+        "Serie 2 de 2",
+      ),
     );
 
     // Re-import overwrites the routine with a day-1 shrunk to a single set.
@@ -203,8 +207,10 @@ describe("App", () => {
 
     // The workout keeps running against its snapshot: step 2 stays on screen
     // and completing it still reaches the summary.
-    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
-      "Serie 2 de 2",
+    await waitFor(() =>
+      expect(screen.getByTestId("set-progress")).toHaveTextContent(
+        "Serie 2 de 2",
+      ),
     );
     await user.click(screen.getByTestId("set-continue"));
     expect(await screen.findByTestId("session-summary")).toHaveTextContent(
