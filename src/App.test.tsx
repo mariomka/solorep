@@ -49,6 +49,22 @@ describe("App", () => {
     );
   });
 
+  it("opens the stats screen from the home header and returns to the list", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(await screen.findByTestId("stats-entry"));
+
+    expect(
+      await screen.findByTestId("stats-exercises-empty"),
+    ).toHaveTextContent("Aún no has entrenado ningún ejercicio.");
+
+    await user.click(screen.getByTestId("stats-back"));
+
+    expect(await screen.findByTestId("app-title")).toHaveTextContent("Solorep");
+    expect(await screen.findByTestId("routine-list-empty")).toBeInTheDocument();
+  });
+
   it("imports a routine file and shows it in the list", async () => {
     const user = userEvent.setup();
     render(<App />);

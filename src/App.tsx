@@ -1,10 +1,15 @@
 import { useLiveQuery } from "dexie-react-hooks";
+import { ChartLine } from "lucide-react";
 import { useEffect, useState } from "react";
 import { DayOverview } from "@/components/day-overview";
 import { DaySelection } from "@/components/day-selection";
+import { ExerciseStatsDetail } from "@/components/exercise-stats-detail";
 import { ResumeSessionPrompt } from "@/components/resume-session-prompt";
 import { RoutineList } from "@/components/routine-list";
+import { SessionStatsDetail } from "@/components/session-stats-detail";
 import { SessionSummary } from "@/components/session-summary";
+import { StatsScreen, type StatsTab } from "@/components/stats-screen";
+import { Button } from "@/components/ui/button";
 import { WorkoutScreen } from "@/components/workout-screen";
 import { db, type RoutineRecord } from "@/lib/db";
 import { findAutoResumableSession } from "@/lib/resume-session";
@@ -14,7 +19,10 @@ type Screen =
   | { name: "day-selection"; routineId: string }
   | { name: "day-overview"; routineId: string; dayIndex: number }
   | { name: "workout"; routineId: string; dayIndex: number }
-  | { name: "summary" };
+  | { name: "summary" }
+  | { name: "stats"; tab: StatsTab }
+  | { name: "stats-exercise"; exerciseKey: string }
+  | { name: "stats-session"; sessionId: number };
 
 interface WorkoutRouteProps {
   routineId: string;
@@ -116,13 +124,24 @@ function App() {
     >
       {screen.name === "list" && (
         <>
-          <header className="mb-10 border-b pb-5">
+          <header className="mb-10 flex items-center justify-between border-b pb-5">
             <h1
               data-test="app-title"
               className="font-heading text-4xl font-black tracking-[-1px] uppercase"
             >
               Solorep
             </h1>
+            <Button
+              data-test="stats-entry"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setScreen({ name: "stats", tab: "exercises" });
+              }}
+            >
+              <ChartLine />
+              Estadísticas
+            </Button>
           </header>
           <div className="flex flex-col gap-8">
             <ResumeSessionPrompt
@@ -188,6 +207,39 @@ function App() {
         <SessionSummary
           onFinished={() => {
             setScreen({ name: "list" });
+          }}
+        />
+      )}
+      {screen.name === "stats" && (
+        <StatsScreen
+          tab={screen.tab}
+          onTabChange={(tab) => {
+            setScreen({ name: "stats", tab });
+          }}
+          onSelectExercise={(exerciseKey) => {
+            setScreen({ name: "stats-exercise", exerciseKey });
+          }}
+          onSelectSession={(sessionId) => {
+            setScreen({ name: "stats-session", sessionId });
+          }}
+          onBack={() => {
+            setScreen({ name: "list" });
+          }}
+        />
+      )}
+      {screen.name === "stats-exercise" && (
+        <ExerciseStatsDetail
+          exerciseKey={screen.exerciseKey}
+          onBack={() => {
+            setScreen({ name: "stats", tab: "exercises" });
+          }}
+        />
+      )}
+      {screen.name === "stats-session" && (
+        <SessionStatsDetail
+          sessionId={screen.sessionId}
+          onBack={() => {
+            setScreen({ name: "stats", tab: "sessions" });
           }}
         />
       )}
