@@ -102,17 +102,38 @@ export function buildExerciseNameMap(
   return nameMap;
 }
 
+function humanizeKey(key: string): string {
+  const words = key.split("-").join(" ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 /** Catalog name when known, else humanized kebab key: "bench-press" -> "Bench press". */
 export function resolveExerciseName(
   exerciseKey: string,
   nameMap: Map<string, string>,
 ): string {
-  const catalogName = nameMap.get(exerciseKey);
-  if (catalogName !== undefined) {
-    return catalogName;
-  }
-  const words = exerciseKey.split("-").join(" ");
-  return words.charAt(0).toUpperCase() + words.slice(1);
+  return nameMap.get(exerciseKey) ?? humanizeKey(exerciseKey);
+}
+
+export interface SessionLabels {
+  routineName: string;
+  dayName: string;
+}
+
+/**
+ * Routine and day names for an archived session; both survive routine
+ * deletion via fallbacks.
+ */
+export function resolveSessionLabels(
+  session: SessionRecord,
+  routines: RoutineRecord[],
+): SessionLabels {
+  const record = routines.find((routine) => routine.id === session.routineId);
+  const routineName = record?.routine.name ?? "Rutina eliminada";
+  const dayName =
+    record?.routine.days.find((day) => day.id === session.dayId)?.name ??
+    humanizeKey(session.dayId);
+  return { routineName, dayName };
 }
 
 export interface SessionExerciseGroup {

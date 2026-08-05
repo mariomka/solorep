@@ -15,6 +15,7 @@ import {
   buildExerciseNameMap,
   formatStatsDate,
   resolveExerciseName,
+  resolveSessionLabels,
 } from "@/lib/stats";
 import { cn } from "@/lib/utils";
 
@@ -33,11 +34,6 @@ function formatSetCount(setCount: number): string {
   return isSingular ? "1 serie" : `${setCount} series`;
 }
 
-function humanizeDayId(dayId: string): string {
-  const words = dayId.split("-").join(" ");
-  return words.charAt(0).toUpperCase() + words.slice(1);
-}
-
 interface SessionRowsProps {
   sessions: SessionRecord[];
   routines: RoutineRecord[];
@@ -49,16 +45,13 @@ function SessionRows({
   routines,
   onSelectSession,
 }: SessionRowsProps) {
-  const routinesById = new Map(routines.map((record) => [record.id, record]));
-
   return (
     <div className="border-t">
       {sessions.map((session) => {
-        const routineRecord = routinesById.get(session.routineId);
-        const routineName = routineRecord?.routine.name ?? "Rutina eliminada";
-        const dayName =
-          routineRecord?.routine.days.find((day) => day.id === session.dayId)
-            ?.name ?? humanizeDayId(session.dayId);
+        const { routineName, dayName } = resolveSessionLabels(
+          session,
+          routines,
+        );
         const durationSeconds = Math.floor(
           (session.finishedAt - session.startedAt) / 1000,
         );
