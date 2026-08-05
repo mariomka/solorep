@@ -92,7 +92,9 @@ export function SessionStatsDetail({
             <dl className="border-t">
               {group.sets.map((set) => (
                 <div
-                  key={set.setIndex}
+                  // setIndex alone can collide: the same exercise key in two
+                  // day slots merges into one group with duplicate indexes.
+                  key={`${set.completedAt}-${set.setIndex}`}
                   className="flex items-baseline justify-between gap-6 border-b py-3"
                 >
                   <dt className="text-sm text-muted-foreground">
