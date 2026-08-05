@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { db, type RoutineRecord, type SessionRecord } from "@/lib/db";
 import { formatDuration } from "@/lib/format-duration";
+import { formatSetCount } from "@/lib/format-set-count";
 import {
   aggregateTrainedExercises,
   buildExerciseNameMap,
@@ -27,11 +28,6 @@ interface StatsScreenProps {
   onSelectExercise: (exerciseKey: string) => void;
   onSelectSession: (sessionId: number) => void;
   onBack: () => void;
-}
-
-function formatSetCount(setCount: number): string {
-  const isSingular = setCount === 1;
-  return isSingular ? "1 serie" : `${setCount} series`;
 }
 
 interface SessionRowsProps {

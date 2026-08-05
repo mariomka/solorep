@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db";
 import { formatDuration } from "@/lib/format-duration";
+import { formatSetCount } from "@/lib/format-set-count";
 import {
   buildExerciseNameMap,
   formatStatsDate,
@@ -15,11 +16,6 @@ import {
 interface SessionStatsDetailProps {
   sessionId: number;
   onBack: () => void;
-}
-
-function formatSetCount(setCount: number): string {
-  const isSingular = setCount === 1;
-  return isSingular ? "1 serie" : `${setCount} series`;
 }
 
 export function SessionStatsDetail({

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db";
 import { getExerciseGifUrl } from "@/lib/exercise-media";
+import { formatSetCount } from "@/lib/format-set-count";
 import type {
   DayItemPhase,
   ExerciseSet,
@@ -94,13 +95,8 @@ function buildDayOverviewSections(day: RoutineDay): DayOverviewSection[] {
   return sections;
 }
 
-function formatSeriesCount(seriesCount: number): string {
-  const isSingular = seriesCount === 1;
-  return isSingular ? "1 serie" : `${seriesCount} series`;
-}
-
 function formatSetPrescription(sets: ExerciseSet[]): string {
-  const seriesText = formatSeriesCount(sets.length);
+  const seriesText = formatSetCount(sets.length);
   const repetitions = sets.flatMap((set) => ("reps" in set ? [set.reps] : []));
   const hasOnlyRepetitions = repetitions.length === sets.length;
   if (hasOnlyRepetitions) {
@@ -308,7 +304,7 @@ export function DayOverview({
       </h2>
       <p className="mt-2 mb-8 text-sm text-muted-foreground">
         {record.routine.name} · {exerciseCountText} ·{" "}
-        {formatSeriesCount(totalSeries)}
+        {formatSetCount(totalSeries)}
       </p>
 
       {sections.map((section) => {
