@@ -92,12 +92,14 @@ function renderStats(options: RenderOptions = {}) {
 beforeEach(clearDatabase);
 
 describe("StatsScreen", () => {
-  it("shows an empty message per tab when there are no sessions", async () => {
+  it("shows an empty message on the exercises tab when there are no sessions", async () => {
     renderStats();
     expect(
       await screen.findByTestId("stats-exercises-empty"),
     ).toHaveTextContent("Aún no has entrenado ningún ejercicio.");
+  });
 
+  it("shows an empty message on the sessions tab when there are no sessions", async () => {
     renderStats({ tab: "sessions" });
     expect(await screen.findByTestId("stats-sessions-empty")).toHaveTextContent(
       "Aún no hay sesiones registradas.",
