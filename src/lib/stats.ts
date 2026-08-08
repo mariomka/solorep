@@ -86,6 +86,58 @@ export function buildExerciseProgression(
   return { metric, points };
 }
 
+export type ProgressionRange = "3m" | "1y" | "all";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const WEEK_MS = 7 * DAY_MS;
+
+const RANGE_WINDOW_MS: Record<Exclude<ProgressionRange, "all">, number> = {
+  "3m": 90 * DAY_MS,
+  "1y": 365 * DAY_MS,
+};
+
+/**
+ * Points with finishedAt within the range window ending at `now` (90/365
+ * days); "all" returns the input unchanged. `now` is explicit to keep the
+ * function pure.
+ */
+export function filterProgressionPoints(
+  points: ProgressionPoint[],
+  range: ProgressionRange,
+  now: number,
+): ProgressionPoint[] {
+  if (range === "all") {
+    return points;
+  }
+  const cutoff = now - RANGE_WINDOW_MS[range];
+  return points.filter((point) => point.finishedAt >= cutoff);
+}
+
+/**
+ * Collapses points into 7-day buckets anchored at `now`: one point per
+ * bucket with the max value in it and the latest finishedAt. Output sorted
+ * ascending by finishedAt.
+ */
+export function bucketProgressionPoints(
+  points: ProgressionPoint[],
+  now: number,
+): ProgressionPoint[] {
+  const pointsByBucket = new Map<number, ProgressionPoint>();
+  for (const point of points) {
+    const bucket = Math.floor((now - point.finishedAt) / WEEK_MS);
+    const existing = pointsByBucket.get(bucket);
+    if (existing === undefined) {
+      pointsByBucket.set(bucket, { ...point });
+    } else {
+      existing.value = Math.max(existing.value, point.value);
+      existing.finishedAt = Math.max(existing.finishedAt, point.finishedAt);
+    }
+  }
+  return [...pointsByBucket.values()].sort(
+    (a, b) => a.finishedAt - b.finishedAt,
+  );
+}
+
 /** Maps exercise keys to catalog names; latest importedAt wins on collisions. */
 export function buildExerciseNameMap(
   routines: RoutineRecord[],

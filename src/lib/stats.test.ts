@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { RoutineRecord, SessionRecord } from "@/lib/db";
 import {
   aggregateTrainedExercises,
+  bucketProgressionPoints,
   buildExerciseNameMap,
   buildExerciseProgression,
+  filterProgressionPoints,
   groupSessionEntries,
   resolveExerciseName,
 } from "@/lib/stats";
@@ -202,5 +204,75 @@ describe("groupSessionEntries", () => {
 
   it("returns an empty list for no entries", () => {
     expect(groupSessionEntries([])).toEqual([]);
+  });
+});
+
+describe("filterProgressionPoints", () => {
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const now = 1_000 * DAY_MS;
+  const points = [
+    { finishedAt: now - 400 * DAY_MS, value: 50 },
+    { finishedAt: now - 90 * DAY_MS, value: 60 },
+    { finishedAt: now - 10 * DAY_MS, value: 70 },
+  ];
+
+  it("keeps only points inside the 3m window, including the boundary", () => {
+    expect(filterProgressionPoints(points, "3m", now)).toEqual([
+      { finishedAt: now - 90 * DAY_MS, value: 60 },
+      { finishedAt: now - 10 * DAY_MS, value: 70 },
+    ]);
+  });
+
+  it("keeps only points inside the 1y window", () => {
+    expect(filterProgressionPoints(points, "1y", now)).toEqual([
+      { finishedAt: now - 90 * DAY_MS, value: 60 },
+      { finishedAt: now - 10 * DAY_MS, value: 70 },
+    ]);
+  });
+
+  it('returns the input unchanged for "all"', () => {
+    expect(filterProgressionPoints(points, "all", now)).toBe(points);
+  });
+});
+
+describe("bucketProgressionPoints", () => {
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const now = 1_000 * DAY_MS;
+
+  it("collapses same-week points to the max value with the latest timestamp", () => {
+    const points = [
+      { finishedAt: now - 6 * DAY_MS, value: 80 },
+      { finishedAt: now - 4 * DAY_MS, value: 70 },
+      { finishedAt: now - 2 * DAY_MS, value: 75 },
+    ];
+
+    expect(bucketProgressionPoints(points, now)).toEqual([
+      { finishedAt: now - 2 * DAY_MS, value: 80 },
+    ]);
+  });
+
+  it("preserves ascending order across buckets", () => {
+    const points = [
+      { finishedAt: now - 20 * DAY_MS, value: 50 },
+      { finishedAt: now - 16 * DAY_MS, value: 55 },
+      { finishedAt: now - 9 * DAY_MS, value: 60 },
+      { finishedAt: now - 2 * DAY_MS, value: 65 },
+    ];
+
+    expect(bucketProgressionPoints(points, now)).toEqual([
+      { finishedAt: now - 16 * DAY_MS, value: 55 },
+      { finishedAt: now - 9 * DAY_MS, value: 60 },
+      { finishedAt: now - 2 * DAY_MS, value: 65 },
+    ]);
+  });
+
+  it("leaves sparse points (one per week) unchanged", () => {
+    const points = [
+      { finishedAt: now - 15 * DAY_MS, value: 50 },
+      { finishedAt: now - 8 * DAY_MS, value: 55 },
+      { finishedAt: now - 1 * DAY_MS, value: 60 },
+    ];
+
+    expect(bucketProgressionPoints(points, now)).toEqual(points);
   });
 });
