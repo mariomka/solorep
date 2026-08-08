@@ -1,6 +1,8 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { ChartLine } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Redirect, Route, Router, Switch, useLocation } from "wouter";
+import { useHashLocation } from "wouter/use-hash-location";
 import { DayOverview } from "@/components/day-overview";
 import { DaySelection } from "@/components/day-selection";
 import { ExerciseStatsDetail } from "@/components/exercise-stats-detail";
@@ -8,21 +10,19 @@ import { ResumeSessionPrompt } from "@/components/resume-session-prompt";
 import { RoutineList } from "@/components/routine-list";
 import { SessionStatsDetail } from "@/components/session-stats-detail";
 import { SessionSummary } from "@/components/session-summary";
-import { StatsScreen, type StatsTab } from "@/components/stats-screen";
+import { StatsScreen } from "@/components/stats-screen";
 import { Button } from "@/components/ui/button";
 import { WorkoutScreen } from "@/components/workout-screen";
 import { db, type RoutineRecord } from "@/lib/db";
 import { findAutoResumableSession } from "@/lib/resume-session";
 
-type Screen =
-  | { name: "list" }
-  | { name: "day-selection"; routineId: string }
-  | { name: "day-overview"; routineId: string; dayIndex: number }
-  | { name: "workout"; routineId: string; dayIndex: number }
-  | { name: "summary" }
-  | { name: "stats"; tab: StatsTab }
-  | { name: "stats-exercise"; exerciseKey: string }
-  | { name: "stats-session"; sessionId: number };
+function parseDayIndex(raw: string): number | undefined {
+  const isNumeric = /^\d+$/.test(raw);
+  if (!isNumeric) {
+    return undefined;
+  }
+  return Number.parseInt(raw, 10);
+}
 
 interface WorkoutRouteProps {
   routineId: string;
@@ -86,22 +86,21 @@ function WorkoutRoute({
   );
 }
 
-function App() {
-  const [screen, setScreen] = useState<Screen>({ name: "list" });
+function AppShell() {
+  const [, navigate] = useLocation();
+
   // A session with recent activity re-enters the workout directly on launch
   // (a backgrounded PWA gets killed mid-rest; reopening must not lose the
-  // countdown behind a prompt). Runs once on mount, so Salir still lands on
-  // the list with the regular resume prompt.
+  // countdown behind a prompt). Runs once on mount regardless of the load
+  // route, so Salir still lands on the list with the regular resume prompt.
   const [isAutoResumePending, setIsAutoResumePending] = useState(true);
   useEffect(() => {
     let isActive = true;
     findAutoResumableSession()
       .then((target) => {
         if (isActive && target !== undefined) {
-          setScreen({
-            name: "workout",
-            routineId: target.routineId,
-            dayIndex: target.dayIndex,
+          navigate(`/workout/${target.routineId}/${target.dayIndex}`, {
+            replace: true,
           });
         }
       })
@@ -116,7 +115,7 @@ function App() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [navigate]);
 
   if (isAutoResumePending) {
     return null;
@@ -127,8 +126,8 @@ function App() {
       data-test="app-shell"
       className="mx-auto flex min-h-svh w-full max-w-md flex-col pt-[max(1.5rem,env(safe-area-inset-top))] pr-[max(1.25rem,env(safe-area-inset-right))] pb-6 pl-[max(1.25rem,env(safe-area-inset-left))]"
     >
-      {screen.name === "list" && (
-        <>
+      <Switch>
+        <Route path="/">
           <header className="mb-10 flex items-center justify-between border-b pb-5">
             <h1
               data-test="app-title"
@@ -142,7 +141,7 @@ function App() {
               size="icon"
               aria-label="Estadísticas"
               onClick={() => {
-                setScreen({ name: "stats", tab: "exercises" });
+                navigate("/stats/exercises");
               }}
             >
               <ChartLine />
@@ -151,114 +150,156 @@ function App() {
           <div className="flex flex-col gap-8">
             <ResumeSessionPrompt
               onResume={({ routineId, dayIndex }) => {
-                setScreen({ name: "workout", routineId, dayIndex });
+                navigate(`/workout/${routineId}/${dayIndex}`);
               }}
             />
             <RoutineList
               onSelectRoutine={(routineId) => {
-                setScreen({ name: "day-selection", routineId });
+                navigate(`/routine/${routineId}`);
               }}
             />
           </div>
-        </>
-      )}
-      {screen.name === "day-selection" && (
-        <DaySelection
-          routineId={screen.routineId}
-          onSelectDay={(dayIndex) => {
-            setScreen({
-              name: "day-overview",
-              routineId: screen.routineId,
-              dayIndex,
-            });
+        </Route>
+        <Route path="/routine/:id">
+          {(params) => (
+            <DaySelection
+              routineId={params.id}
+              onSelectDay={(dayIndex) => {
+                navigate(`/routine/${params.id}/day/${dayIndex}`);
+              }}
+              onBack={() => {
+                navigate("/");
+              }}
+              onMissing={() => {
+                navigate("/", { replace: true });
+              }}
+            />
+          )}
+        </Route>
+        <Route path="/routine/:id/day/:n">
+          {(params) => {
+            const dayIndex = parseDayIndex(params.n);
+            if (dayIndex === undefined) {
+              return <Redirect to="/" replace />;
+            }
+            return (
+              <DayOverview
+                routineId={params.id}
+                dayIndex={dayIndex}
+                onStart={() => {
+                  navigate(`/workout/${params.id}/${dayIndex}`);
+                }}
+                onBack={() => {
+                  navigate(`/routine/${params.id}`);
+                }}
+                onUnavailable={() => {
+                  navigate("/", { replace: true });
+                }}
+              />
+            );
           }}
-          onBack={() => {
-            setScreen({ name: "list" });
+        </Route>
+        <Route path="/workout/:id/:n">
+          {(params) => {
+            const dayIndex = parseDayIndex(params.n);
+            if (dayIndex === undefined) {
+              return <Redirect to="/" replace />;
+            }
+            return (
+              <WorkoutRoute
+                routineId={params.id}
+                dayIndex={dayIndex}
+                onDayCompleted={() => {
+                  navigate("/summary", { replace: true });
+                }}
+                onExit={() => {
+                  navigate("/", { replace: true });
+                }}
+              />
+            );
           }}
-          onMissing={() => {
-            setScreen({ name: "list" });
+        </Route>
+        <Route path="/summary">
+          <SessionSummary
+            onFinished={() => {
+              navigate("/", { replace: true });
+            }}
+          />
+        </Route>
+        <Route path="/stats/exercise/:key">
+          {(params) => (
+            <ExerciseStatsDetail
+              // Keyed by exercise so the range state resets per exercise.
+              key={params.key}
+              exerciseKey={params.key}
+              onBack={() => {
+                navigate("/stats/exercises");
+              }}
+            />
+          )}
+        </Route>
+        <Route path="/stats/session/:id">
+          {(params) => {
+            const sessionId = parseDayIndex(params.id);
+            if (sessionId === undefined) {
+              return <Redirect to="/" replace />;
+            }
+            return (
+              <SessionStatsDetail
+                sessionId={sessionId}
+                onBack={() => {
+                  navigate("/stats/sessions");
+                }}
+                onMissing={() => {
+                  navigate("/stats/sessions", { replace: true });
+                }}
+              />
+            );
           }}
-        />
-      )}
-      {screen.name === "day-overview" && (
-        <DayOverview
-          routineId={screen.routineId}
-          dayIndex={screen.dayIndex}
-          onStart={() => {
-            setScreen({
-              name: "workout",
-              routineId: screen.routineId,
-              dayIndex: screen.dayIndex,
-            });
+        </Route>
+        <Route path="/stats/:tab">
+          {(params) => {
+            const tab = params.tab;
+            // An inline check instead of a named boolean: TypeScript only
+            // narrows the tab union through the direct comparison.
+            if (tab !== "exercises" && tab !== "sessions") {
+              return <Redirect to="/" replace />;
+            }
+            return (
+              <StatsScreen
+                tab={tab}
+                onTabChange={(nextTab) => {
+                  navigate(`/stats/${nextTab}`, { replace: true });
+                }}
+                onSelectExercise={(exerciseKey) => {
+                  navigate(
+                    `/stats/exercise/${encodeURIComponent(exerciseKey)}`,
+                  );
+                }}
+                onSelectSession={(sessionId) => {
+                  navigate(`/stats/session/${sessionId}`);
+                }}
+                onBack={() => {
+                  navigate("/");
+                }}
+              />
+            );
           }}
-          onBack={() => {
-            setScreen({
-              name: "day-selection",
-              routineId: screen.routineId,
-            });
-          }}
-          onUnavailable={() => {
-            setScreen({ name: "list" });
-          }}
-        />
-      )}
-      {screen.name === "workout" && (
-        <WorkoutRoute
-          routineId={screen.routineId}
-          dayIndex={screen.dayIndex}
-          onDayCompleted={() => {
-            setScreen({ name: "summary" });
-          }}
-          onExit={() => {
-            setScreen({ name: "list" });
-          }}
-        />
-      )}
-      {screen.name === "summary" && (
-        <SessionSummary
-          onFinished={() => {
-            setScreen({ name: "list" });
-          }}
-        />
-      )}
-      {screen.name === "stats" && (
-        <StatsScreen
-          tab={screen.tab}
-          onTabChange={(tab) => {
-            setScreen({ name: "stats", tab });
-          }}
-          onSelectExercise={(exerciseKey) => {
-            setScreen({ name: "stats-exercise", exerciseKey });
-          }}
-          onSelectSession={(sessionId) => {
-            setScreen({ name: "stats-session", sessionId });
-          }}
-          onBack={() => {
-            setScreen({ name: "list" });
-          }}
-        />
-      )}
-      {screen.name === "stats-exercise" && (
-        <ExerciseStatsDetail
-          key={screen.exerciseKey}
-          exerciseKey={screen.exerciseKey}
-          onBack={() => {
-            setScreen({ name: "stats", tab: "exercises" });
-          }}
-        />
-      )}
-      {screen.name === "stats-session" && (
-        <SessionStatsDetail
-          sessionId={screen.sessionId}
-          onBack={() => {
-            setScreen({ name: "stats", tab: "sessions" });
-          }}
-          onMissing={() => {
-            setScreen({ name: "stats", tab: "sessions" });
-          }}
-        />
-      )}
+        </Route>
+        <Route>
+          <Redirect to="/" replace />
+        </Route>
+      </Switch>
     </main>
+  );
+}
+
+function App() {
+  // The Router stays here so App.test.tsx exercises the real routing.
+  return (
+    <Router hook={useHashLocation}>
+      <AppShell />
+    </Router>
   );
 }
 
