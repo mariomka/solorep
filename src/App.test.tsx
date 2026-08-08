@@ -234,6 +234,50 @@ describe("App", () => {
     );
   });
 
+  it("keeps the workout on its routine snapshot when a re-import removes the day mid-session", async () => {
+    await db.routines.put({
+      id: miniRoutine.id,
+      routine: miniRoutine,
+      importedAt: Date.now(),
+    });
+    await startSession(miniRoutine.id, "day-2", 1);
+    await db.activeSession.update("current", { updatedAt: staleUpdatedAt() });
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(await screen.findByTestId("resume-session-resume"));
+    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
+      "Serie 1 de 1",
+    );
+    const repsInput = screen.getByTestId("set-reps-input");
+    await waitFor(() => expect(repsInput).toHaveValue("10"));
+
+    // Re-import overwrites the routine without day-2: the live record no
+    // longer has the day the workout is running.
+    const shrunkRoutine = parseRoutine({
+      ...miniRoutineData,
+      days: [miniRoutineData.days[0]],
+    });
+    await db.routines.put({
+      id: shrunkRoutine.id,
+      routine: shrunkRoutine,
+      importedAt: Date.now(),
+    });
+
+    // The workout keeps running against its snapshot instead of ejecting to
+    // the list, and completing the set still reaches the summary.
+    await waitFor(() =>
+      expect(screen.getByTestId("set-progress")).toHaveTextContent(
+        "Serie 1 de 1",
+      ),
+    );
+    await user.click(screen.getByTestId("set-continue"));
+    expect(await screen.findByTestId("session-summary")).toHaveTextContent(
+      "Resumen",
+    );
+  });
+
   it("resumes a mid-session workout from the list prompt at the right step", async () => {
     await db.routines.put({
       id: miniRoutine.id,
@@ -402,6 +446,7 @@ describe("App hash routing", () => {
     "#/routine/unknown",
     "#/stats/session/abc",
     "#/stats/bogus",
+    "#/garbage",
   ])("redirects %s to the list", async (hash) => {
     await seedMiniRoutine();
     window.history.replaceState(null, "", hash);

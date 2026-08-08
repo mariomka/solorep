@@ -16,7 +16,7 @@ import { WorkoutScreen } from "@/components/workout-screen";
 import { db, type RoutineRecord } from "@/lib/db";
 import { findAutoResumableSession } from "@/lib/resume-session";
 
-function parseDayIndex(raw: string): number | undefined {
+function parseNumericParam(raw: string): number | undefined {
   const isNumeric = /^\d+$/.test(raw);
   if (!isNumeric) {
     return undefined;
@@ -48,10 +48,15 @@ function WorkoutRoute({
   const [snapshotRecord, setSnapshotRecord] = useState<
     RoutineRecord | undefined
   >(undefined);
-  const shouldSnapshot =
+  const isRecordLoaded = liveRecord !== undefined && liveRecord !== null;
+  // The day check only guards entry (a stale deep link): once the snapshot
+  // exists, a re-import that shrinks the days must not eject the workout.
+  const isDayMissing =
     snapshotRecord === undefined &&
-    liveRecord !== undefined &&
-    liveRecord !== null;
+    isRecordLoaded &&
+    liveRecord.routine.days[dayIndex] === undefined;
+  const shouldSnapshot =
+    snapshotRecord === undefined && isRecordLoaded && !isDayMissing;
   useEffect(() => {
     if (shouldSnapshot) {
       setSnapshotRecord(liveRecord);
@@ -59,13 +64,9 @@ function WorkoutRoute({
   }, [shouldSnapshot, liveRecord]);
 
   const isMissing = liveRecord === null;
-  const isDayMissing =
-    liveRecord !== undefined &&
-    liveRecord !== null &&
-    liveRecord.routine.days[dayIndex] === undefined;
   useEffect(() => {
     // The routine vanished mid-workout (deleted in another tab) or the day
-    // index points past the plan (stale deep link): bail out.
+    // index points past the plan on entry (stale deep link): bail out.
     if (isMissing || isDayMissing) {
       onExit();
     }
@@ -178,7 +179,7 @@ function AppShell() {
         </Route>
         <Route path="/routine/:id/day/:n">
           {(params) => {
-            const dayIndex = parseDayIndex(params.n);
+            const dayIndex = parseNumericParam(params.n);
             if (dayIndex === undefined) {
               return <Redirect to="/" replace />;
             }
@@ -201,7 +202,7 @@ function AppShell() {
         </Route>
         <Route path="/workout/:id/:n">
           {(params) => {
-            const dayIndex = parseDayIndex(params.n);
+            const dayIndex = parseNumericParam(params.n);
             if (dayIndex === undefined) {
               return <Redirect to="/" replace />;
             }
@@ -240,7 +241,7 @@ function AppShell() {
         </Route>
         <Route path="/stats/session/:id">
           {(params) => {
-            const sessionId = parseDayIndex(params.id);
+            const sessionId = parseNumericParam(params.id);
             if (sessionId === undefined) {
               return <Redirect to="/" replace />;
             }
