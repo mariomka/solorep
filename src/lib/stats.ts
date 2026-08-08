@@ -115,8 +115,9 @@ export function filterProgressionPoints(
 
 /**
  * Collapses points into 7-day buckets anchored at `now`: one point per
- * bucket with the max value in it and the latest finishedAt. Output sorted
- * ascending by finishedAt.
+ * bucket, the whole max-value point (so the tooltip date is the date the
+ * value actually happened); on value ties the later point wins. Output
+ * sorted ascending by finishedAt.
  */
 export function bucketProgressionPoints(
   points: ProgressionPoint[],
@@ -126,11 +127,13 @@ export function bucketProgressionPoints(
   for (const point of points) {
     const bucket = Math.floor((now - point.finishedAt) / WEEK_MS);
     const existing = pointsByBucket.get(bucket);
-    if (existing === undefined) {
-      pointsByBucket.set(bucket, { ...point });
-    } else {
-      existing.value = Math.max(existing.value, point.value);
-      existing.finishedAt = Math.max(existing.finishedAt, point.finishedAt);
+    const isNewBucketMax =
+      existing === undefined ||
+      point.value > existing.value ||
+      (point.value === existing.value &&
+        point.finishedAt > existing.finishedAt);
+    if (isNewBucketMax) {
+      pointsByBucket.set(bucket, point);
     }
   }
   return [...pointsByBucket.values()].sort(

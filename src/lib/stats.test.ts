@@ -239,11 +239,22 @@ describe("bucketProgressionPoints", () => {
   const DAY_MS = 24 * 60 * 60 * 1000;
   const now = 1_000 * DAY_MS;
 
-  it("collapses same-week points to the max value with the latest timestamp", () => {
+  it("collapses same-week points to the max point with its own timestamp", () => {
     const points = [
       { finishedAt: now - 6 * DAY_MS, value: 80 },
       { finishedAt: now - 4 * DAY_MS, value: 70 },
       { finishedAt: now - 2 * DAY_MS, value: 75 },
+    ];
+
+    expect(bucketProgressionPoints(points, now)).toEqual([
+      { finishedAt: now - 6 * DAY_MS, value: 80 },
+    ]);
+  });
+
+  it("keeps the later point when same-week values tie", () => {
+    const points = [
+      { finishedAt: now - 6 * DAY_MS, value: 80 },
+      { finishedAt: now - 2 * DAY_MS, value: 80 },
     ];
 
     expect(bucketProgressionPoints(points, now)).toEqual([
