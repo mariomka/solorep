@@ -3,6 +3,9 @@
 ## How It Works
 
 - Mobile-first single column (`max-w-md mx-auto`) -- this is a phone-at-the-gym app; desktop is an afterthought.
+- Navigation is hash routing via wouter (`Router hook={useHashLocation}` in `App.tsx`) -- GitHub Pages cannot rewrite paths. Routes: `/` (list), `/routine/:id`, `/routine/:id/day/:n`, `/workout/:id/:n`, `/summary`, `/stats/:tab` (`exercises`|`sessions`), `/stats/exercise/:key`, `/stats/session/:id`; anything else redirects to `/`.
+- Push vs replace: user-driven forward navigation and every Volver push; programmatic exits replace (workout→summary, summary→list, workout Salir, auto-resume, stats tab switches, and all missing-data bail-outs) so back never re-enters a dead screen. Numeric params are validated (`/^\d+$/`) and exercise keys go through `encodeURIComponent`.
+- Screens over missing data don't render an error: they fire a required bail-out callback (`onMissing`/`onUnavailable`) in an effect and the route replace-navigates away.
 - shadcn/ui primitives live in `src/components/ui/` -- add new ones with `bunx shadcn@latest add <name>`, never hand-write or edit them casually. Feature components live flat in `src/components/`.
 - Tailwind 4 is CSS-first: theme tokens live in `src/index.css` (`@theme`), there is no tailwind.config file.
 - Path alias `@/` -> `src/` (both tsconfig and vite resolve it).
