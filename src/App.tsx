@@ -134,13 +134,13 @@ function App() {
             <Button
               data-test="stats-entry"
               variant="ghost"
-              size="icon"
-              aria-label="Estadísticas"
+              size="sm"
               onClick={() => {
                 setScreen({ name: "stats", tab: "exercises" });
               }}
             >
               <ChartLine />
+              Estadísticas
             </Button>
           </header>
           <div className="flex flex-col gap-8">
