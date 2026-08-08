@@ -26,6 +26,7 @@ describe("DayOverview", () => {
         dayIndex={1}
         onStart={vi.fn()}
         onBack={vi.fn()}
+        onUnavailable={vi.fn()}
       />,
     );
 
@@ -56,6 +57,7 @@ describe("DayOverview", () => {
         dayIndex={0}
         onStart={vi.fn()}
         onBack={vi.fn()}
+        onUnavailable={vi.fn()}
       />,
     );
 
@@ -79,6 +81,7 @@ describe("DayOverview", () => {
         dayIndex={2}
         onStart={onStart}
         onBack={vi.fn()}
+        onUnavailable={vi.fn()}
       />,
     );
 
@@ -105,6 +108,7 @@ describe("DayOverview", () => {
         dayIndex={0}
         onStart={vi.fn()}
         onBack={onBack}
+        onUnavailable={vi.fn()}
       />,
     );
 
@@ -112,6 +116,36 @@ describe("DayOverview", () => {
 
     expect(onBack).toHaveBeenCalledOnce();
     await expect(db.activeSession.get("current")).resolves.toBeUndefined();
+  });
+
+  it("calls onUnavailable when the routine does not exist", async () => {
+    const onUnavailable = vi.fn();
+    render(
+      <DayOverview
+        routineId="unknown-routine"
+        dayIndex={0}
+        onStart={vi.fn()}
+        onBack={vi.fn()}
+        onUnavailable={onUnavailable}
+      />,
+    );
+
+    await waitFor(() => expect(onUnavailable).toHaveBeenCalled());
+  });
+
+  it("calls onUnavailable when the day index is out of range", async () => {
+    const onUnavailable = vi.fn();
+    render(
+      <DayOverview
+        routineId={routine.id}
+        dayIndex={99}
+        onStart={vi.fn()}
+        onBack={vi.fn()}
+        onUnavailable={onUnavailable}
+      />,
+    );
+
+    await waitFor(() => expect(onUnavailable).toHaveBeenCalled());
   });
 });
 
@@ -179,6 +213,7 @@ describe("DayOverview phase sections", () => {
         dayIndex={0}
         onStart={vi.fn()}
         onBack={vi.fn()}
+        onUnavailable={vi.fn()}
       />,
     );
     await screen.findByTestId("day-overview-name");
@@ -240,6 +275,7 @@ describe("DayOverview phase sections", () => {
         dayIndex={1}
         onStart={vi.fn()}
         onBack={vi.fn()}
+        onUnavailable={vi.fn()}
       />,
     );
     await screen.findByTestId("day-overview-name");

@@ -22,6 +22,7 @@ interface DayOverviewProps {
   dayIndex: number;
   onStart: () => void;
   onBack: () => void;
+  onUnavailable: () => void;
 }
 
 interface DayOverviewEntry {
@@ -231,6 +232,7 @@ export function DayOverview({
   dayIndex,
   onStart,
   onBack,
+  onUnavailable,
 }: DayOverviewProps) {
   const record = useLiveQuery(
     async () => (await db.routines.get(routineId)) ?? null,
@@ -246,9 +248,9 @@ export function DayOverview({
   const isUnavailable = hasLoaded && (record === null || day === undefined);
   useEffect(() => {
     if (isUnavailable) {
-      onBack();
+      onUnavailable();
     }
-  }, [isUnavailable, onBack]);
+  }, [isUnavailable, onUnavailable]);
 
   if (record === undefined || record === null || day === undefined) {
     return null;

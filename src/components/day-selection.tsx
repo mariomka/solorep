@@ -1,5 +1,6 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +16,7 @@ interface DaySelectionProps {
   routineId: string;
   onSelectDay: (dayIndex: number) => void;
   onBack: () => void;
+  onMissing: () => void;
 }
 
 function formatExerciseCount(exerciseCount: number): string {
@@ -26,6 +28,7 @@ export function DaySelection({
   routineId,
   onSelectDay,
   onBack,
+  onMissing,
 }: DaySelectionProps) {
   const data = useLiveQuery(async () => {
     const [record, progress] = await Promise.all([
@@ -35,14 +38,17 @@ export function DaySelection({
     return { record, progress };
   }, [routineId]);
 
-  const isLoading = data === undefined;
-  if (isLoading) {
-    return null;
-  }
+  const record = data?.record;
+  const isMissing = data !== undefined && record === undefined;
+  useEffect(() => {
+    // The routine no longer exists (deleted, or a stale deep link): bail out.
+    if (isMissing) {
+      onMissing();
+    }
+  }, [isMissing, onMissing]);
 
-  const record = data.record;
-  const isMissing = record === undefined;
-  if (isMissing) {
+  const isLoading = data === undefined;
+  if (isLoading || record === undefined) {
     return null;
   }
 

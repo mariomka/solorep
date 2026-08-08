@@ -62,7 +62,13 @@ describe("SessionStatsDetail", () => {
   it("renders groups in entry order with reps, duration, and weight values", async () => {
     await seedSession();
 
-    render(<SessionStatsDetail sessionId={SESSION_ID} onBack={() => {}} />);
+    render(
+      <SessionStatsDetail
+        sessionId={SESSION_ID}
+        onBack={vi.fn()}
+        onMissing={vi.fn()}
+      />,
+    );
 
     expect(
       await screen.findByTestId("session-stats-day-name"),
@@ -95,11 +101,19 @@ describe("SessionStatsDetail", () => {
     expect(pushUpGroup).not.toHaveTextContent("kg");
   });
 
-  it("calls onBack when the session does not exist", async () => {
+  it("calls onMissing when the session does not exist", async () => {
     const onBack = vi.fn();
+    const onMissing = vi.fn();
 
-    render(<SessionStatsDetail sessionId={99} onBack={onBack} />);
+    render(
+      <SessionStatsDetail
+        sessionId={99}
+        onBack={onBack}
+        onMissing={onMissing}
+      />,
+    );
 
-    await waitFor(() => expect(onBack).toHaveBeenCalled());
+    await waitFor(() => expect(onMissing).toHaveBeenCalled());
+    expect(onBack).not.toHaveBeenCalled();
   });
 });

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/lib/db";
@@ -24,6 +24,7 @@ describe("DaySelection", () => {
         routineId={routine.id}
         onSelectDay={vi.fn()}
         onBack={vi.fn()}
+        onMissing={vi.fn()}
       />,
     );
 
@@ -50,6 +51,7 @@ describe("DaySelection", () => {
         routineId={routine.id}
         onSelectDay={vi.fn()}
         onBack={vi.fn()}
+        onMissing={vi.fn()}
       />,
     );
 
@@ -72,6 +74,7 @@ describe("DaySelection", () => {
         routineId={routine.id}
         onSelectDay={vi.fn()}
         onBack={vi.fn()}
+        onMissing={vi.fn()}
       />,
     );
 
@@ -96,6 +99,7 @@ describe("DaySelection", () => {
         routineId={routine.id}
         onSelectDay={onSelectDay}
         onBack={vi.fn()}
+        onMissing={vi.fn()}
       />,
     );
 
@@ -104,6 +108,21 @@ describe("DaySelection", () => {
 
     expect(onSelectDay).toHaveBeenCalledExactlyOnceWith(2);
     await expect(db.activeSession.get("current")).resolves.toBeUndefined();
+  });
+
+  it("calls onMissing when the routine does not exist", async () => {
+    const onMissing = vi.fn();
+
+    render(
+      <DaySelection
+        routineId="unknown-routine"
+        onSelectDay={vi.fn()}
+        onBack={vi.fn()}
+        onMissing={onMissing}
+      />,
+    );
+
+    await waitFor(() => expect(onMissing).toHaveBeenCalled());
   });
 
   it("calls onBack when tapping the back button", async () => {
@@ -116,6 +135,7 @@ describe("DaySelection", () => {
         routineId={routine.id}
         onSelectDay={vi.fn()}
         onBack={onBack}
+        onMissing={vi.fn()}
       />,
     );
 

@@ -529,7 +529,13 @@ export function WorkoutScreen({
     getActiveSession()
       .then((session) => {
         if (isActive) {
-          setInitialSession(session ?? null);
+          // A session for another routine or day (e.g. a stale workout URL on
+          // reload) counts as missing: resuming it here would misattribute it.
+          const isSessionMatching =
+            session !== undefined &&
+            session.routineId === routine.id &&
+            session.dayIndex === dayIndex;
+          setInitialSession(isSessionMatching ? session : null);
         }
       })
       .catch((error: unknown) => {
@@ -541,7 +547,7 @@ export function WorkoutScreen({
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [routine.id, dayIndex]);
 
   const isSessionMissing = initialSession === null;
   useEffect(() => {

@@ -16,11 +16,13 @@ import {
 interface SessionStatsDetailProps {
   sessionId: number;
   onBack: () => void;
+  onMissing: () => void;
 }
 
 export function SessionStatsDetail({
   sessionId,
   onBack,
+  onMissing,
 }: SessionStatsDetailProps) {
   const data = useLiveQuery(
     () =>
@@ -33,9 +35,9 @@ export function SessionStatsDetail({
   useEffect(() => {
     // The caller guarantees the session exists; bail out if it does not.
     if (isMissing) {
-      onBack();
+      onMissing();
     }
-  }, [isMissing, onBack]);
+  }, [isMissing, onMissing]);
 
   const isLoading = data === undefined;
   if (isLoading || session === undefined) {

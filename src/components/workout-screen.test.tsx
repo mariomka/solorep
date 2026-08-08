@@ -427,6 +427,16 @@ describe("WorkoutScreen", () => {
     expect(workoutScreenWakeLock.release).toHaveBeenCalledTimes(1);
   });
 
+  it("exits when the active session belongs to another day", async () => {
+    // Session for day 0, screen mounted for day 1: a stale workout URL must
+    // not resume a session it does not own.
+    await seedSession(0);
+    const { onExit } = renderWorkout(1);
+
+    await waitFor(() => expect(onExit).toHaveBeenCalled());
+    expect(screen.queryByTestId("set-exercise-name")).not.toBeInTheDocument();
+  });
+
   it("renders the first step with the last-used weight over the routine's, keeping its planned reps", async () => {
     await seedSession(0);
     await db.lastUsed.put({

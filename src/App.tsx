@@ -59,15 +59,20 @@ function WorkoutRoute({
   }, [shouldSnapshot, liveRecord]);
 
   const isMissing = liveRecord === null;
+  const isDayMissing =
+    liveRecord !== undefined &&
+    liveRecord !== null &&
+    liveRecord.routine.days[dayIndex] === undefined;
   useEffect(() => {
-    // The routine vanished mid-workout (deleted in another tab): bail out.
-    if (isMissing) {
+    // The routine vanished mid-workout (deleted in another tab) or the day
+    // index points past the plan (stale deep link): bail out.
+    if (isMissing || isDayMissing) {
       onExit();
     }
-  }, [isMissing, onExit]);
+  }, [isMissing, isDayMissing, onExit]);
 
   const isLoading = snapshotRecord === undefined;
-  if (isLoading || isMissing) {
+  if (isLoading || isMissing || isDayMissing) {
     return null;
   }
 
@@ -170,6 +175,9 @@ function App() {
           onBack={() => {
             setScreen({ name: "list" });
           }}
+          onMissing={() => {
+            setScreen({ name: "list" });
+          }}
         />
       )}
       {screen.name === "day-overview" && (
@@ -188,6 +196,9 @@ function App() {
               name: "day-selection",
               routineId: screen.routineId,
             });
+          }}
+          onUnavailable={() => {
+            setScreen({ name: "list" });
           }}
         />
       )}
@@ -240,6 +251,9 @@ function App() {
         <SessionStatsDetail
           sessionId={screen.sessionId}
           onBack={() => {
+            setScreen({ name: "stats", tab: "sessions" });
+          }}
+          onMissing={() => {
             setScreen({ name: "stats", tab: "sessions" });
           }}
         />
