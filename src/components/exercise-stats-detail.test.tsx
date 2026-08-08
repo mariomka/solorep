@@ -107,12 +107,12 @@ describe("ExerciseStatsDetail", () => {
     render(<ExerciseStatsDetail exerciseKey="squat" onBack={() => {}} />);
 
     expect(await screen.findByTestId("chart-range-3m")).toHaveAttribute(
-      "aria-pressed",
-      "true",
+      "data-state",
+      "active",
     );
     expect(screen.getByTestId("chart-range-all")).toHaveAttribute(
-      "aria-pressed",
-      "false",
+      "data-state",
+      "inactive",
     );
   });
 
@@ -123,8 +123,8 @@ describe("ExerciseStatsDetail", () => {
     render(<ExerciseStatsDetail exerciseKey="squat" onBack={() => {}} />);
 
     expect(await screen.findByTestId("chart-range-all")).toHaveAttribute(
-      "aria-pressed",
-      "true",
+      "data-state",
+      "active",
     );
     expect(screen.queryByTestId("chart-range-empty")).not.toBeInTheDocument();
   });
@@ -140,16 +140,16 @@ describe("ExerciseStatsDetail", () => {
     await user.click(await screen.findByTestId("chart-range-1y"));
     await waitFor(() =>
       expect(screen.getByTestId("chart-range-1y")).toHaveAttribute(
-        "aria-pressed",
-        "true",
+        "data-state",
+        "active",
       ),
     );
 
     await user.click(screen.getByTestId("chart-range-all"));
     await waitFor(() =>
       expect(screen.getByTestId("chart-range-all")).toHaveAttribute(
-        "aria-pressed",
-        "true",
+        "data-state",
+        "active",
       ),
     );
   });

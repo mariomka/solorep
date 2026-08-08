@@ -139,6 +139,7 @@ export function ExerciseStatsDetail({
                       data-test={`chart-range-${option.range}`}
                       type="button"
                       aria-pressed={isActive}
+                      data-state={isActive ? "active" : "inactive"}
                       className={cn(
                         "border-b-2 pb-1 text-xs font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                         isActive
