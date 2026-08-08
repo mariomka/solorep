@@ -1,7 +1,7 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
-import { CartesianGrid, Line, LineChart, XAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -156,11 +156,25 @@ export function ExerciseStatsDetail({
           </div>
           {hasDisplayedPoints ? (
             <ChartContainer config={chartConfig}>
-              <LineChart
+              <AreaChart
                 accessibilityLayer
                 data={displayedPoints}
                 margin={{ top: 8, left: 16, right: 16 }}
               >
+                <defs>
+                  <linearGradient id="fillValue" x1="0" y1="0" x2="0" y2="1">
+                    <stop
+                      offset="5%"
+                      stopColor="var(--color-value)"
+                      stopOpacity={0.3}
+                    />
+                    <stop
+                      offset="95%"
+                      stopColor="var(--color-value)"
+                      stopOpacity={0}
+                    />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid vertical={false} />
                 <XAxis
                   dataKey="finishedAt"
@@ -183,16 +197,17 @@ export function ExerciseStatsDetail({
                     />
                   }
                 />
-                <Line
+                <Area
                   type="monotone"
                   dataKey="value"
                   stroke="var(--color-value)"
                   strokeWidth={2}
+                  fill="url(#fillValue)"
                   // A single-session series renders nothing without dots;
                   // dense series drown in them.
                   dot={hideDots ? false : { fill: "var(--color-value)" }}
                 />
-              </LineChart>
+              </AreaChart>
             </ChartContainer>
           ) : (
             <p
