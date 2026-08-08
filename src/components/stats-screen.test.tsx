@@ -97,6 +97,9 @@ describe("StatsScreen", () => {
     expect(
       await screen.findByTestId("stats-exercises-empty"),
     ).toHaveTextContent("Aún no has entrenado ningún ejercicio.");
+    expect(
+      screen.queryByTestId("stats-exercise-search"),
+    ).not.toBeInTheDocument();
   });
 
   it("shows an empty message on the sessions tab when there are no sessions", async () => {
@@ -121,7 +124,7 @@ describe("StatsScreen", () => {
       "Sentadilla",
     );
 
-    const rows = screen.getAllByTestId(/^stats-exercise-/);
+    const rows = screen.getAllByTestId(/^stats-exercise-(?!search)/);
     expect(rows.map((row) => row.getAttribute("data-test"))).toEqual([
       "stats-exercise-goblet-squat",
       "stats-exercise-push-up",
@@ -158,6 +161,49 @@ describe("StatsScreen", () => {
       `stats-session-${newId}`,
       `stats-session-${oldId}`,
     ]);
+  });
+
+  it("filters the exercise list as the user types, accent-insensitively", async () => {
+    await seedRoutine();
+    await seedSessions();
+
+    renderStats();
+    const user = userEvent.setup();
+
+    await user.type(
+      await screen.findByTestId("stats-exercise-search"),
+      "flexión",
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stats-exercise-squat"),
+      ).not.toBeInTheDocument();
+    });
+    expect(
+      screen.queryByTestId("stats-exercise-goblet-squat"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("stats-exercise-push-up")).toHaveTextContent(
+      "Flexiones",
+    );
+  });
+
+  it("shows a no-match message when the query matches nothing", async () => {
+    await seedRoutine();
+    await seedSessions();
+
+    renderStats();
+    const user = userEvent.setup();
+
+    await user.type(
+      await screen.findByTestId("stats-exercise-search"),
+      "peso muerto",
+    );
+
+    expect(
+      await screen.findByTestId("stats-exercise-search-empty"),
+    ).toHaveTextContent("Ningún ejercicio coincide.");
+    expect(screen.getByTestId("stats-exercise-search")).toBeInTheDocument();
   });
 
   it("fires onSelectExercise and onSelectSession with the row's key and id", async () => {

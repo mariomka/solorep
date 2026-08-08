@@ -1,5 +1,6 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { db, type RoutineRecord, type SessionRecord } from "@/lib/db";
 import { formatDuration } from "@/lib/format-duration";
 import { formatSetCount } from "@/lib/format-set-count";
@@ -94,42 +96,80 @@ interface ExerciseRowsProps {
   onSelectExercise: (exerciseKey: string) => void;
 }
 
+/** Case- and accent-insensitive comparison key: "Prés" -> "pres". */
+function normalizeSearchText(text: string): string {
+  return text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+}
+
 function ExerciseRows({
   sessions,
   routines,
   onSelectExercise,
 }: ExerciseRowsProps) {
+  const [query, setQuery] = useState("");
   const trainedExercises = aggregateTrainedExercises(sessions);
   const nameMap = buildExerciseNameMap(routines);
 
+  const hasExercises = trainedExercises.length > 0;
+  const normalizedQuery = normalizeSearchText(query);
+  const matchingExercises = trainedExercises
+    .map((exercise) => ({
+      ...exercise,
+      name: resolveExerciseName(exercise.exerciseKey, nameMap),
+    }))
+    .filter((exercise) =>
+      normalizeSearchText(exercise.name).includes(normalizedQuery),
+    );
+  const hasMatches = matchingExercises.length > 0;
+
   return (
-    <div className="border-t">
-      {trainedExercises.map((exercise) => (
-        <button
-          key={exercise.exerciseKey}
-          data-test={`stats-exercise-${exercise.exerciseKey}`}
-          type="button"
-          className="block w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          onClick={() => onSelectExercise(exercise.exerciseKey)}
+    <>
+      {hasExercises && (
+        <Input
+          data-test="stats-exercise-search"
+          type="search"
+          placeholder="Buscar ejercicio…"
+          aria-label="Buscar ejercicio"
+          className="mb-4"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      )}
+      {hasMatches ? (
+        <div className="border-t">
+          {matchingExercises.map((exercise) => (
+            <button
+              key={exercise.exerciseKey}
+              data-test={`stats-exercise-${exercise.exerciseKey}`}
+              type="button"
+              className="block w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onClick={() => onSelectExercise(exercise.exerciseKey)}
+            >
+              <Card className="cursor-pointer border-x-0 border-t-0 py-0 transition-colors hover:bg-accent">
+                <CardHeader className="grid grid-cols-[1fr_auto] gap-x-4 px-4 py-5">
+                  <div className="min-w-0">
+                    <CardTitle>{exercise.name}</CardTitle>
+                    <CardDescription className="mt-1 tabular-nums">
+                      {formatStatsDate(exercise.lastTrainedAt)}
+                    </CardDescription>
+                  </div>
+                  <div className="col-start-2 row-start-1 self-center">
+                    <ArrowRight className="size-4 text-primary" />
+                  </div>
+                </CardHeader>
+              </Card>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p
+          data-test="stats-exercise-search-empty"
+          className="text-sm text-muted-foreground"
         >
-          <Card className="cursor-pointer border-x-0 border-t-0 py-0 transition-colors hover:bg-accent">
-            <CardHeader className="grid grid-cols-[1fr_auto] gap-x-4 px-4 py-5">
-              <div className="min-w-0">
-                <CardTitle>
-                  {resolveExerciseName(exercise.exerciseKey, nameMap)}
-                </CardTitle>
-                <CardDescription className="mt-1 tabular-nums">
-                  {formatStatsDate(exercise.lastTrainedAt)}
-                </CardDescription>
-              </div>
-              <div className="col-start-2 row-start-1 self-center">
-                <ArrowRight className="size-4 text-primary" />
-              </div>
-            </CardHeader>
-          </Card>
-        </button>
-      ))}
-    </div>
+          Ningún ejercicio coincide.
+        </p>
+      )}
+    </>
   );
 }
 
