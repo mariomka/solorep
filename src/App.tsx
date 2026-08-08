@@ -134,13 +134,13 @@ function App() {
             <Button
               data-test="stats-entry"
               variant="ghost"
-              size="sm"
+              size="icon"
+              aria-label="Estadísticas"
               onClick={() => {
                 setScreen({ name: "stats", tab: "exercises" });
               }}
             >
               <ChartLine />
-              Estadísticas
             </Button>
           </header>
           <div className="flex flex-col gap-8">
@@ -229,6 +229,7 @@ function App() {
       )}
       {screen.name === "stats-exercise" && (
         <ExerciseStatsDetail
+          key={screen.exerciseKey}
           exerciseKey={screen.exerciseKey}
           onBack={() => {
             setScreen({ name: "stats", tab: "exercises" });
