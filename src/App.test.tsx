@@ -306,6 +306,8 @@ describe("App", () => {
     expect(
       screen.queryByTestId("resume-session-prompt"),
     ).not.toBeInTheDocument();
+    // The auto-resume replace-navigates onto the workout route itself.
+    expect(window.location.hash).toBe("#/workout/mini/0");
   });
 
   it("auto-resumes into the remaining rest of a killed session", async () => {
@@ -368,5 +370,123 @@ describe("App", () => {
       "Resumen",
     );
     expect(screen.queryByTestId("set-progress")).not.toBeInTheDocument();
+  });
+});
+
+describe("App hash routing", () => {
+  async function seedMiniRoutine(): Promise<void> {
+    await db.routines.put({
+      id: miniRoutine.id,
+      routine: miniRoutine,
+      importedAt: Date.now(),
+    });
+  }
+
+  it("restores the screen from a deep link", async () => {
+    await seedMiniRoutine();
+    window.history.replaceState(null, "", "#/routine/mini");
+
+    render(<App />);
+
+    expect(await screen.findByTestId("day-name-day-1")).toHaveTextContent(
+      "Día 1",
+    );
+    expect(await screen.findByTestId("day-name-day-2")).toHaveTextContent(
+      "Día 2",
+    );
+  });
+
+  it.each([
+    "#/routine/mini/day/banana",
+    "#/routine/mini/day/99",
+    "#/routine/unknown",
+    "#/stats/session/abc",
+    "#/stats/bogus",
+  ])("redirects %s to the list", async (hash) => {
+    await seedMiniRoutine();
+    window.history.replaceState(null, "", hash);
+
+    render(<App />);
+
+    expect(await screen.findByTestId("app-title")).toHaveTextContent("Solorep");
+    await waitFor(() => expect(window.location.hash).toBe("#/"));
+  });
+
+  it("exits the workout via browser back keeping the session resumable", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    const input = await screen.findByTestId("import-routine-input");
+    await user.upload(input, makeRoutineFile(miniRoutineData));
+    await user.click(await screen.findByTestId("routine-card-mini"));
+    await user.click(await screen.findByTestId("day-card-day-1"));
+    await user.click(await screen.findByTestId("day-overview-start"));
+    await screen.findByTestId("set-exercise-name");
+
+    window.history.back();
+
+    // No confirmation: back lands straight on the day overview and the
+    // session row survives for the resume prompt.
+    expect(await screen.findByTestId("day-overview-name")).toHaveTextContent(
+      "Día 1",
+    );
+    expect(screen.queryByTestId("set-exercise-name")).not.toBeInTheDocument();
+    await expect(db.activeSession.get("current")).resolves.toBeDefined();
+  });
+
+  it("never re-enters the finished workout when going back from the summary", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    const input = await screen.findByTestId("import-routine-input");
+    await user.upload(input, makeRoutineFile(miniRoutineData));
+    await user.click(await screen.findByTestId("routine-card-mini"));
+    // Day 2 has a single set, so one completion finishes the day.
+    await user.click(await screen.findByTestId("day-card-day-2"));
+    await user.click(await screen.findByTestId("day-overview-start"));
+
+    const repsInput = await screen.findByTestId("set-reps-input");
+    await waitFor(() => expect(repsInput).toHaveValue("10"));
+    await user.click(screen.getByTestId("set-continue"));
+    expect(await screen.findByTestId("session-summary")).toHaveTextContent(
+      "Resumen",
+    );
+
+    window.history.back();
+
+    // The workout entry was replaced by the summary: back skips it entirely.
+    expect(await screen.findByTestId("day-overview-name")).toHaveTextContent(
+      "Día 2",
+    );
+    expect(screen.queryByTestId("set-exercise-name")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("session-summary")).not.toBeInTheDocument();
+  });
+
+  it("resumes the workout when reloading on its workout URL", async () => {
+    await seedMiniRoutine();
+    await startSession(miniRoutine.id, "day-1", 0);
+    await db.activeSession.update("current", {
+      currentStepIndex: 1,
+      updatedAt: staleUpdatedAt(),
+    });
+    window.history.replaceState(null, "", "#/workout/mini/0");
+
+    render(<App />);
+
+    expect(await screen.findByTestId("set-progress")).toHaveTextContent(
+      "Serie 2 de 2",
+    );
+  });
+
+  it("bails to the list when the workout URL mismatches the active session", async () => {
+    await seedMiniRoutine();
+    await startSession(miniRoutine.id, "day-1", 0);
+    await db.activeSession.update("current", { updatedAt: staleUpdatedAt() });
+    window.history.replaceState(null, "", "#/workout/mini/1");
+
+    render(<App />);
+
+    expect(await screen.findByTestId("app-title")).toHaveTextContent("Solorep");
+    await waitFor(() => expect(window.location.hash).toBe("#/"));
   });
 });
