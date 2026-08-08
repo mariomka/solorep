@@ -40,7 +40,7 @@ Color is functional:
 - Ink blue identifies navigation, progress, current state, and important numeric data.
 - The accent wash communicates hover or selection without overpowering content.
 - Destructive red is reserved for an active warning or destructive confirmation. Do not use it to advertise an infrequent action such as deleting a routine.
-- Do not introduce decorative colors, gradients, or colored shadows.
+- Do not introduce decorative colors, gradients, or colored shadows. Exception: chart area fills may fade the primary color to transparent; they encode data, not decoration.
 
 ### Shape and depth
 
