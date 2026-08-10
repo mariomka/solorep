@@ -1,8 +1,5 @@
 # Solorep
 
-> [!WARNING]
-> Work in progress — not usable yet.
-
 Gym workout PWA. Import routines as JSON, train, track your last-used weights and reps. 100% frontend, deployed on GitHub Pages.
 
 - [SCHEMA.md](SCHEMA.md) — routine JSON format
