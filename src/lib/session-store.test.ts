@@ -26,7 +26,27 @@ function completionIdentity(
 beforeEach(clearDatabase);
 
 describe("startSession", () => {
-  it("creates the singleton row and a second start overwrites it", async () => {
+  it("leaves a running session for the same day untouched", async () => {
+    await startSession("fullbody-3d", "day-1", 0);
+    await recordSetCompletion({
+      stepIndex: 0,
+      ...completionIdentity("back-squat"),
+      exerciseKey: "back-squat",
+      setIndex: 0,
+      reps: 10,
+      weight: 60,
+    });
+
+    // The day overview is reachable again mid-workout (browser back): its
+    // action must resume, never reset.
+    await startSession("fullbody-3d", "day-1", 0);
+
+    const session = await getActiveSession();
+    expect(session).toMatchObject({ currentStepIndex: 1 });
+    expect(session?.completed).toHaveLength(1);
+  });
+
+  it("creates the singleton row and a start on another day overwrites it", async () => {
     await startSession("fullbody-3d", "day-1", 0);
 
     const first = await getActiveSession();

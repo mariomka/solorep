@@ -50,23 +50,44 @@ function resolveLastLoggedWeight(
     );
 }
 
+/**
+ * Starts the day's session, unless one for that very day is already running:
+ * then it is left untouched and the caller resumes it.
+ *
+ * The overview is reachable again mid-workout (browser back, an accidental
+ * edge swipe on the phone, a stale deep link), and its action landing on a
+ * blind `put` is how a session loses every set it had logged. The guard lives
+ * here rather than in the overview so no caller can reset a running day.
+ */
 export async function startSession(
   routineId: string,
   dayId: string,
   dayIndex: number,
 ): Promise<void> {
-  const now = Date.now();
-  await db.activeSession.put({
-    id: ACTIVE_SESSION_ID,
-    routineId,
-    dayId,
-    dayIndex,
-    startedAt: now,
-    currentStepIndex: 0,
-    swaps: {},
-    postponed: [],
-    completed: [],
-    updatedAt: now,
+  await db.transaction("rw", db.activeSession, async () => {
+    const session = await db.activeSession.get(ACTIVE_SESSION_ID);
+    const isSameDayRunning =
+      session !== undefined &&
+      session.routineId === routineId &&
+      session.dayId === dayId &&
+      session.dayIndex === dayIndex;
+    if (isSameDayRunning) {
+      return;
+    }
+
+    const now = Date.now();
+    await db.activeSession.put({
+      id: ACTIVE_SESSION_ID,
+      routineId,
+      dayId,
+      dayIndex,
+      startedAt: now,
+      currentStepIndex: 0,
+      swaps: {},
+      postponed: [],
+      completed: [],
+      updatedAt: now,
+    });
   });
 }
 

@@ -13,7 +13,7 @@ import type {
   RoutineDay,
 } from "@/lib/routine-schema";
 import { resolveItemPhase } from "@/lib/routine-schema";
-import { startSession } from "@/lib/session-store";
+import { getActiveSession, startSession } from "@/lib/session-store";
 import { prepareTimerAudio } from "@/lib/timer-feedback";
 import { cn } from "@/lib/utils";
 
@@ -234,10 +234,14 @@ export function DayOverview({
   onBack,
   onUnavailable,
 }: DayOverviewProps) {
-  const record = useLiveQuery(
-    async () => (await db.routines.get(routineId)) ?? null,
+  const data = useLiveQuery(
+    async () => ({
+      record: (await db.routines.get(routineId)) ?? null,
+      session: await getActiveSession(),
+    }),
     [routineId],
   );
+  const record = data?.record;
   const [isStarting, setIsStarting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>(
     undefined,
@@ -255,6 +259,15 @@ export function DayOverview({
   if (record === undefined || record === null || day === undefined) {
     return null;
   }
+
+  // A session for this very day is resumed, never restarted, so the action
+  // says what it does instead of promising a fresh start over logged sets.
+  const session = data?.session;
+  const isDayInProgress =
+    session !== undefined &&
+    session.routineId === routineId &&
+    session.dayId === day.id &&
+    session.dayIndex === dayIndex;
 
   const entries = buildDayOverviewEntries(day);
   const sections = buildDayOverviewSections(day);
@@ -363,7 +376,7 @@ export function DayOverview({
         onClick={handleStart}
         disabled={isStarting}
       >
-        Empezar entrenamiento
+        {isDayInProgress ? "Reanudar entrenamiento" : "Empezar entrenamiento"}
       </Button>
     </div>
   );

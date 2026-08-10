@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/lib/db";
 import { parseRoutine } from "@/lib/routine-schema";
+import { recordSetCompletion, startSession } from "@/lib/session-store";
 import { prepareTimerAudio } from "@/lib/timer-feedback";
 import { clearDatabase } from "@/test/helpers";
 import fullbody3d from "../../examples/fullbody-3d.json";
@@ -97,6 +98,40 @@ describe("DayOverview", () => {
       dayId: "day-3",
       dayIndex: 2,
     });
+  });
+
+  it("resumes a session already running for the day instead of resetting it", async () => {
+    const onStart = vi.fn();
+    const user = userEvent.setup();
+    await startSession(routine.id, "day-3", 2);
+    await recordSetCompletion({
+      stepIndex: 0,
+      slotKey: "0:0",
+      primaryExerciseKey: "deadlift",
+      exerciseKey: "deadlift",
+      setIndex: 0,
+      reps: 5,
+      weight: 100,
+    });
+    render(
+      <DayOverview
+        routineId={routine.id}
+        dayIndex={2}
+        onStart={onStart}
+        onBack={vi.fn()}
+        onUnavailable={vi.fn()}
+      />,
+    );
+
+    const startButton = await screen.findByTestId("day-overview-start");
+    expect(startButton).toHaveTextContent("Reanudar entrenamiento");
+
+    await user.click(startButton);
+
+    await waitFor(() => expect(onStart).toHaveBeenCalledOnce());
+    const session = await db.activeSession.get("current");
+    expect(session).toMatchObject({ currentStepIndex: 1 });
+    expect(session?.completed).toHaveLength(1);
   });
 
   it("returns to day selection without creating a session", async () => {

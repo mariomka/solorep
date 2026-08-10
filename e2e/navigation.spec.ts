@@ -38,6 +38,31 @@ test("browser back exits the workout and the session stays resumable", async ({
   await expect(resumePrompt).toContainText("Tienes un entrenamiento en curso");
 });
 
+test("starting again from the overview resumes the workout instead of resetting it", async ({
+  page,
+}) => {
+  await importRoutine(page);
+
+  await page.getByTestId(`routine-card-${routineId}`).click();
+  await page.getByTestId(`day-card-${dayAId}`).click();
+  await page.getByTestId("day-overview-start").click();
+
+  const setProgress = page.getByTestId("set-progress");
+  await expect(setProgress).toHaveText("Serie 1 de 2");
+  await page.getByTestId("set-continue").click();
+  await page.getByTestId("rest-skip").click();
+  await expect(setProgress).toHaveText("Serie 2 de 2");
+
+  // An accidental back gesture mid-workout lands on the overview: its action
+  // now resumes the running day rather than wiping the logged set.
+  await page.goBack();
+  const startButton = page.getByTestId("day-overview-start");
+  await expect(startButton).toHaveText("Reanudar entrenamiento");
+  await startButton.click();
+
+  await expect(setProgress).toHaveText("Serie 2 de 2");
+});
+
 test("back from the summary never re-enters the finished workout", async ({
   page,
 }) => {
