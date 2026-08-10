@@ -702,14 +702,14 @@ export function SetScreen({
       {(hasExerciseActions || hasPostponeError) && (
         <div className="flex flex-col gap-2">
           {hasExerciseActions && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {hasInstructions && (
                 <Sheet>
                   <SheetTrigger asChild>
                     <Button
                       data-test="technique-trigger"
                       variant="outline"
-                      size="sm"
+                      size="xs"
                     >
                       Ver técnica
                     </Button>
@@ -761,7 +761,7 @@ export function SetScreen({
                     <Button
                       data-test="set-exercise-select"
                       variant="outline"
-                      size="sm"
+                      size="xs"
                       disabled={isExerciseChangeDisabled}
                     >
                       Alternativas
@@ -785,7 +785,7 @@ export function SetScreen({
                 <Button
                   data-test="set-postpone"
                   variant="outline"
-                  size="sm"
+                  size="xs"
                   onClick={handlePostpone}
                   disabled={isPostponeDisabled}
                 >
