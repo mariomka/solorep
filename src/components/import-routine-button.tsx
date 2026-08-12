@@ -91,7 +91,7 @@ export function ImportRoutineButton({
           <p
             data-test="import-routine-error"
             role="alert"
-            className="col-span-2 text-sm whitespace-pre-line text-destructive"
+            className="col-span-full text-sm whitespace-pre-line text-destructive"
           >
             {error}
           </p>

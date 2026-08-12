@@ -1,5 +1,6 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { ArrowRight, Ellipsis, Trash2 } from "lucide-react";
+import { ExportDataButton } from "@/components/export-data-button";
 import { ImportRoutineButton } from "@/components/import-routine-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,10 +71,11 @@ export function RoutineList({ onSelectRoutine }: RoutineListProps) {
   return (
     <div data-test="routine-list">
       <section className="flex flex-col gap-4" aria-labelledby="routines-title">
-        <div className="grid grid-cols-[1fr_auto] items-center gap-y-2">
+        <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-1 gap-y-2">
           <Badge id="routines-title" variant="secondary">
             Rutinas
           </Badge>
+          <ExportDataButton />
           <ImportRoutineButton mode="menu" />
         </div>
         <div className="border-t">
